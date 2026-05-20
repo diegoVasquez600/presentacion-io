@@ -263,26 +263,42 @@ export function PertView() {
 
   const markedCriticalNodeIds = useMemo(() => new Set(criticalGuesses), [criticalGuesses])
 
+  const markedCriticalRouteIndices = useMemo(() => {
+    const indices = [...markedCriticalNodeIds]
+      .map((id) => criticalRouteIndexByNodeId.get(id))
+      .filter((index): index is number => index !== undefined)
+      .sort((a, b) => a - b)
+    return indices
+  }, [criticalRouteIndexByNodeId, markedCriticalNodeIds])
+
   const inferredCriticalNodeIds = useMemo(() => {
-    const ids = new Set<string>(markedCriticalNodeIds)
+    const ids = new Set<string>()
+    if (markedCriticalRouteIndices.length === 0) {
+      return ids
+    }
 
-    for (const nodeId of markedCriticalNodeIds) {
-      const routeIndex = criticalRouteIndexByNodeId.get(nodeId)
-      if (routeIndex === undefined) {
-        continue
-      }
+    for (const index of markedCriticalRouteIndices) {
+      ids.add(pertRouteCritical[index])
+    }
 
-      if (routeIndex === 1) {
-        ids.add(pertRouteCritical[0])
-      }
-
-      if (routeIndex === pertRouteCritical.length - 2) {
-        ids.add(pertRouteCritical[pertRouteCritical.length - 1])
+    for (let i = 0; i < markedCriticalRouteIndices.length - 1; i += 1) {
+      const from = markedCriticalRouteIndices[i]
+      const to = markedCriticalRouteIndices[i + 1]
+      for (let index = from; index <= to; index += 1) {
+        ids.add(pertRouteCritical[index])
       }
     }
 
+    if (ids.has(pertRouteCritical[1])) {
+      ids.add(pertRouteCritical[0])
+    }
+
+    if (ids.has(pertRouteCritical[pertRouteCritical.length - 2])) {
+      ids.add(pertRouteCritical[pertRouteCritical.length - 1])
+    }
+
     return ids
-  }, [criticalRouteIndexByNodeId, markedCriticalNodeIds])
+  }, [markedCriticalRouteIndices])
 
   const markedCriticalEdgeIds = useMemo(() => {
     const ids = new Set<string>()
@@ -297,7 +313,8 @@ export function PertView() {
       if (
         (sourceMarked && targetMarked) ||
         (sourceInferred && targetMarked) ||
-        (sourceMarked && targetInferred)
+        (sourceMarked && targetInferred) ||
+        (sourceInferred && targetInferred)
       ) {
         ids.add(`${source}-${target}`)
       }

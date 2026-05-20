@@ -8,8 +8,8 @@ import {
   CloudSun,
   CirclePlay,
   Gauge,
+  Helicopter,
   Package2,
-  Plane,
   RadioTower,
   Server,
 } from 'lucide-react'
@@ -60,7 +60,7 @@ const ecosystemBlocks = [
   {
     title: 'Vehículo Aéreo no Tripulado (UAS)',
     subtitle: 'UAS open-source para captura multiespectral',
-    icon: Plane,
+    icon: Helicopter,
     tone: 'from-violet-500/20 to-fuchsia-500/5',
     tags: ['Vuelo autónomo', 'Mapeo de cultivos', 'Imágenes de alta resolución'],
     detail:
