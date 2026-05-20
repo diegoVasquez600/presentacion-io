@@ -369,7 +369,7 @@ function StatCard({
   accent,
 }: {
   label: string
-  value: number
+  value: number | null
   accent: 'cyan' | 'emerald'
 }) {
   const cls = {
@@ -380,7 +380,7 @@ function StatCard({
   return (
     <div className={`rounded-2xl border p-3 ${cls}`}>
       <p className="text-[10px] uppercase tracking-[0.22em] opacity-70">{label}</p>
-      <p className="mt-1.5 text-lg font-semibold">{value}</p>
+      <p className="mt-1.5 text-lg font-semibold">{value ?? '—'}</p>
     </div>
   )
 }
@@ -390,15 +390,17 @@ function HintCard({
   value,
   shown,
   isCriticalZero,
+  disabled,
   onReveal,
 }: {
   label: string
-  value: number
+  value: number | null
   shown: boolean
   isCriticalZero?: boolean
+  disabled?: boolean
   onReveal: () => void
 }) {
-  if (shown) {
+  if (shown && value !== null) {
     const cls = isCriticalZero
       ? 'border-red-400/25 bg-red-500/10 text-red-200'
       : 'border-amber-400/20 bg-amber-500/8 text-amber-100'
@@ -416,12 +418,13 @@ function HintCard({
     <button
       type="button"
       onClick={onReveal}
-      className="flex flex-col gap-1 rounded-2xl border border-amber-400/12 bg-amber-500/5 p-3 text-left transition hover:border-amber-400/30 hover:bg-amber-500/12 active:scale-[0.97]"
+      disabled={disabled}
+      className="flex flex-col gap-1 rounded-2xl border border-amber-400/12 bg-amber-500/5 p-3 text-left transition hover:border-amber-400/30 hover:bg-amber-500/12 active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-50"
     >
       <span className="text-[10px] uppercase tracking-[0.22em] text-slate-500">{label}</span>
       <span className="flex items-center gap-1.5 text-xs font-medium text-amber-400/70">
         <Eye className="h-3.5 w-3.5" />
-        Ver pista
+        {disabled ? 'Selecciona un nodo' : 'Ver pista'}
       </span>
     </button>
   )
