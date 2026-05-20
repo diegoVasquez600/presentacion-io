@@ -8,7 +8,16 @@ import {
   type NodeMouseHandler,
 } from '@xyflow/react'
 import '@xyflow/react/dist/style.css'
-import { Eye, Flame, RotateCcw } from 'lucide-react'
+import {
+  CheckCircle2,
+  ChevronDown,
+  ChevronUp,
+  Eye,
+  Flame,
+  RotateCcw,
+  Trophy,
+  UserPlus,
+} from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { CustomPertNode, type PertNodeData } from './CustomPertNode'
 import { pertLinksAll, pertNodesAll, pertRouteCritical } from './pertData'
@@ -17,6 +26,32 @@ const nodeTypes = { pert: CustomPertNode }
 
 const HINT_KEY = 'pert-hints-v1'
 const VISITED_KEY = 'pert-visited-v1'
+const GUESSES_KEY = 'pert-guesses-v1'
+const SCOREBOARD_KEY = 'pert-scoreboard-v1'
+const PLAYER_KEY = 'pert-player-v1'
+const GUIDE_OPEN_KEY = 'pert-guide-open-v1'
+
+const nodeLegendItems = [
+  { key: 'IP', label: 'Inicio proximo', color: 'text-cyan-200' },
+  { key: 'TP', label: 'Terminacion proxima', color: 'text-cyan-200' },
+  { key: 't', label: 'Duracion de la actividad', color: 'text-emerald-200' },
+  { key: 'H', label: 'Holgura', color: 'text-amber-200' },
+  { key: 'IL', label: 'Inicio lejano', color: 'text-amber-200' },
+  { key: 'TL', label: 'Terminacion lejana', color: 'text-amber-200' },
+  { key: 'ID', label: 'Identificador del nodo', color: 'text-white' },
+]
+
+type ScoreEntry = {
+  id: string
+  playerName: string
+  score: number
+  hits: number
+  falsePositives: number
+  missed: number
+  hintsUsed: number
+  visitedPct: number
+  submittedAt: string
+}
 
 function loadHints(): Record<string, string[]> {
   try {
@@ -36,11 +71,51 @@ function loadVisited(): string[] {
   }
 }
 
+function loadGuesses(): string[] {
+  try {
+    const raw = localStorage.getItem(GUESSES_KEY)
+    return raw ? (JSON.parse(raw) as string[]) : []
+  } catch {
+    return []
+  }
+}
+
+function loadScoreboard(): ScoreEntry[] {
+  try {
+    const raw = localStorage.getItem(SCOREBOARD_KEY)
+    return raw ? (JSON.parse(raw) as ScoreEntry[]) : []
+  } catch {
+    return []
+  }
+}
+
+function loadCurrentPlayer(): string {
+  try {
+    return localStorage.getItem(PLAYER_KEY) ?? ''
+  } catch {
+    return ''
+  }
+}
+
+function loadGuideOpen(): boolean {
+  try {
+    return localStorage.getItem(GUIDE_OPEN_KEY) === '1'
+  } catch {
+    return false
+  }
+}
+
 export function PertView() {
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null)
   const [isCriticalRouteRevealed, setIsCriticalRouteRevealed] = useState(false)
   const [revealedHints, setRevealedHints] = useState<Record<string, string[]>>(loadHints)
   const [visitedNodes, setVisitedNodes] = useState<string[]>(loadVisited)
+  const [criticalGuesses, setCriticalGuesses] = useState<string[]>(loadGuesses)
+  const [scoreboard, setScoreboard] = useState<ScoreEntry[]>(loadScoreboard)
+  const [playerNameDraft, setPlayerNameDraft] = useState(loadCurrentPlayer)
+  const [currentPlayer, setCurrentPlayer] = useState(loadCurrentPlayer)
+  const [lastResult, setLastResult] = useState<ScoreEntry | null>(null)
+  const [isGuideOpen, setIsGuideOpen] = useState(loadGuideOpen)
 
   useEffect(() => {
     localStorage.setItem(HINT_KEY, JSON.stringify(revealedHints))
@@ -49,6 +124,22 @@ export function PertView() {
   useEffect(() => {
     localStorage.setItem(VISITED_KEY, JSON.stringify(visitedNodes))
   }, [visitedNodes])
+
+  useEffect(() => {
+    localStorage.setItem(GUESSES_KEY, JSON.stringify(criticalGuesses))
+  }, [criticalGuesses])
+
+  useEffect(() => {
+    localStorage.setItem(SCOREBOARD_KEY, JSON.stringify(scoreboard))
+  }, [scoreboard])
+
+  useEffect(() => {
+    localStorage.setItem(PLAYER_KEY, currentPlayer)
+  }, [currentPlayer])
+
+  useEffect(() => {
+    localStorage.setItem(GUIDE_OPEN_KEY, isGuideOpen ? '1' : '0')
+  }, [isGuideOpen])
 
   function revealHint(field: string) {
     if (!selectedTaskId) {
@@ -61,21 +152,77 @@ export function PertView() {
     }))
   }
 
-  function resetProgress() {
+  function resetRound() {
     setRevealedHints({})
     setVisitedNodes([])
+    setCriticalGuesses([])
     setIsCriticalRouteRevealed(false)
     setSelectedTaskId(null)
+    setLastResult(null)
     localStorage.removeItem(HINT_KEY)
     localStorage.removeItem(VISITED_KEY)
+    localStorage.removeItem(GUESSES_KEY)
+  }
+
+  function clearScoreboard() {
+    setScoreboard([])
+    localStorage.removeItem(SCOREBOARD_KEY)
+  }
+
+  function startPlayer() {
+    const normalized = playerNameDraft.trim()
+    if (!normalized) {
+      return
+    }
+    setCurrentPlayer(normalized)
+    resetRound()
   }
 
   function isFieldShown(field: string): boolean {
+    if (!selectedTaskId) {
+      return false
+    }
+
     return isCriticalRouteRevealed || (revealedHints[selectedTaskId] ?? []).includes(field)
   }
 
   const criticalTaskIds = useMemo(() => new Set(pertRouteCritical), [])
-  const totalPlayableNodes = pertNodesAll.filter((n) => n.id !== 'Inicio' && n.id !== 'Fin').length
+  const criticalPlayableIds = useMemo(
+    () => new Set(pertRouteCritical.filter((id) => id !== 'Inicio' && id !== 'Fin')),
+    [],
+  )
+  const playableNodeIds = useMemo(
+    () => new Set(pertNodesAll.filter((n) => n.id !== 'Inicio' && n.id !== 'Fin').map((n) => n.id)),
+    [],
+  )
+  const totalPlayableNodes = playableNodeIds.size
+
+  const hintsUsed = useMemo(
+    () => Object.values(revealedHints).reduce((sum, fields) => sum + fields.length, 0),
+    [revealedHints],
+  )
+
+  const guessSet = useMemo(() => new Set(criticalGuesses), [criticalGuesses])
+  const hits = useMemo(
+    () => [...guessSet].filter((id) => criticalPlayableIds.has(id)).length,
+    [criticalPlayableIds, guessSet],
+  )
+  const falsePositives = useMemo(
+    () => [...guessSet].filter((id) => !criticalPlayableIds.has(id)).length,
+    [criticalPlayableIds, guessSet],
+  )
+  const missed = useMemo(
+    () => [...criticalPlayableIds].filter((id) => !guessSet.has(id)).length,
+    [criticalPlayableIds, guessSet],
+  )
+
+  const visitedCount = visitedNodes.length
+  const progressPct = totalPlayableNodes > 0 ? Math.round((visitedCount / totalPlayableNodes) * 100) : 0
+
+  const currentScore = Math.max(
+    0,
+    hits * 20 - falsePositives * 8 - missed * 5 - hintsUsed * 3 + (isCriticalRouteRevealed ? 0 : 10),
+  )
 
   const explorationFocusIds = useMemo(
     () => new Set<string>([...(selectedTaskId ? [selectedTaskId] : []), ...visitedNodes]),
@@ -181,6 +328,53 @@ export function PertView() {
     ? pertLinksAll.filter((edge) => edge.source === selectedTaskId).map((edge) => edge.target)
     : []
 
+  const canToggleSelectedAsCritical =
+    !!selectedTaskId && playableNodeIds.has(selectedTaskId) && !!currentPlayer
+  const selectedIsMarked = !!selectedTaskId && guessSet.has(selectedTaskId)
+
+  function toggleSelectedCriticalGuess() {
+    if (!selectedTaskId || !playableNodeIds.has(selectedTaskId) || !currentPlayer) {
+      return
+    }
+
+    setCriticalGuesses((prev) =>
+      prev.includes(selectedTaskId)
+        ? prev.filter((id) => id !== selectedTaskId)
+        : [...prev, selectedTaskId],
+    )
+  }
+
+  function submitAttempt() {
+    if (!currentPlayer) {
+      return
+    }
+
+    const newEntry: ScoreEntry = {
+      id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      playerName: currentPlayer,
+      score: currentScore,
+      hits,
+      falsePositives,
+      missed,
+      hintsUsed,
+      visitedPct: progressPct,
+      submittedAt: new Date().toLocaleString(),
+    }
+
+    setScoreboard((prev) =>
+      [...prev, newEntry].sort((a, b) => {
+        if (b.score !== a.score) {
+          return b.score - a.score
+        }
+        if (a.hintsUsed !== b.hintsUsed) {
+          return a.hintsUsed - b.hintsUsed
+        }
+        return b.hits - a.hits
+      }),
+    )
+    setLastResult(newEntry)
+  }
+
   const handleNodeClick: NodeMouseHandler = (_, node) => {
     setSelectedTaskId(node.id)
     if (node.id !== 'Inicio' && node.id !== 'Fin') {
@@ -188,12 +382,8 @@ export function PertView() {
     }
   }
 
-  const visitedCount = visitedNodes.length
-  const progressPct = Math.round((visitedCount / totalPlayableNodes) * 100)
-
   return (
-    <section className="grid gap-4 xl:grid-cols-[minmax(0,2.35fr)_330px]">
-      {/* ── Main flow panel ── */}
+    <section className="grid gap-4 xl:grid-cols-[minmax(0,2.35fr)_360px]">
       <div className="rounded-[26px] border border-white/10 bg-slate-950/70 p-4 md:p-5">
         <div className="mb-4 flex flex-col gap-3 xl:flex-row xl:items-end xl:justify-between">
           <div>
@@ -204,9 +394,8 @@ export function PertView() {
               El laberinto de la ruta crítica
             </h2>
             <p className="mt-2 max-w-4xl text-sm leading-6 text-slate-300 md:text-base">
-              Haz clic en un nodo para analizar sus conexiones. Usa las{' '}
-              <span className="font-semibold text-amber-300">pistas</span> del panel para
-              revelar H, IL y TL de forma individual por nodo.
+              Exploren el grafo, marquen nodos críticos y envíen su intento para comparar
+              puntajes entre participantes.
             </p>
           </div>
 
@@ -247,10 +436,30 @@ export function PertView() {
         </div>
       </div>
 
-      {/* ── Sidebar ── */}
       <aside className="flex flex-col gap-4 rounded-[26px] border border-white/10 bg-white/[0.04] p-5 md:p-6">
+        <div className="rounded-3xl border border-white/10 bg-slate-950/70 p-4">
+          <p className="text-xs uppercase tracking-[0.34em] text-slate-400">Participante actual</p>
+          <div className="mt-3 flex gap-2">
+            <input
+              value={playerNameDraft}
+              onChange={(event) => setPlayerNameDraft(event.target.value)}
+              placeholder="Nombre"
+              className="min-w-0 flex-1 rounded-xl border border-white/15 bg-slate-900/70 px-3 py-2 text-sm text-white outline-none transition placeholder:text-slate-500 focus:border-cyan-400/50"
+            />
+            <button
+              type="button"
+              onClick={startPlayer}
+              className="inline-flex items-center gap-1 rounded-xl border border-cyan-400/30 bg-cyan-500/10 px-3 py-2 text-xs font-semibold text-cyan-100 transition hover:bg-cyan-500/20"
+            >
+              <UserPlus className="h-4 w-4" />
+              Iniciar
+            </button>
+          </div>
+          <p className="mt-2 text-xs text-slate-400">
+            {currentPlayer ? `Jugando: ${currentPlayer}` : 'Define un nombre para comenzar.'}
+          </p>
+        </div>
 
-        {/* Selected node card */}
         <div className="rounded-3xl border border-white/10 bg-slate-950/70 p-4">
           <div className="flex items-start justify-between gap-2">
             <p className="text-xs uppercase tracking-[0.34em] text-slate-400">Nodo seleccionado</p>
@@ -268,6 +477,20 @@ export function PertView() {
               ? selectedNode.actividad
               : 'Haz clic en un nodo para comenzar a explorar la red y calcular la ruta crítica.'}
           </p>
+
+          <button
+            type="button"
+            onClick={toggleSelectedCriticalGuess}
+            disabled={!canToggleSelectedAsCritical}
+            className={`mt-3 inline-flex w-full items-center justify-center gap-2 rounded-xl border px-3 py-2 text-xs font-semibold transition ${
+              selectedIsMarked
+                ? 'border-emerald-400/40 bg-emerald-500/15 text-emerald-100'
+                : 'border-white/15 bg-white/5 text-slate-200 hover:bg-white/10'
+            } disabled:cursor-not-allowed disabled:opacity-50`}
+          >
+            <CheckCircle2 className="h-4 w-4" />
+            {selectedIsMarked ? 'Marcado como crítico' : 'Marcar como crítico'}
+          </button>
 
           <div className="mt-4 grid grid-cols-2 gap-2">
             <StatCard label="Tiempo (t)" value={selectedNode?.duracionDias ?? null} accent="emerald" />
@@ -298,15 +521,48 @@ export function PertView() {
           </div>
         </div>
 
-        {/* Node map reference */}
         <div className="rounded-3xl border border-white/10 bg-slate-950/70 p-4">
-          <p className="mb-3 text-xs uppercase tracking-[0.34em] text-slate-400">
-            Referencia visual del nodo
-          </p>
-          <NodeMap />
+          <button
+            type="button"
+            onClick={() => setIsGuideOpen((prev) => !prev)}
+            className="flex w-full items-center justify-between text-left"
+            aria-expanded={isGuideOpen}
+          >
+            <span className="text-xs uppercase tracking-[0.34em] text-slate-400">Guia del nodo PERT</span>
+            <span className="inline-flex items-center gap-2 text-[11px] text-slate-400">
+              {isGuideOpen ? 'Ocultar' : 'Mostrar'}
+              {isGuideOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+            </span>
+          </button>
+
+          {isGuideOpen ? (
+            <>
+              <p className="mt-2 text-xs leading-5 text-slate-400">
+                Esta referencia muestra donde va cada variable dentro del nodo y como leerlo rapido.
+              </p>
+              <div className="mt-3">
+                <NodeMap />
+              </div>
+              <div className="mt-3 space-y-2">
+                {nodeLegendItems.map((item) => (
+                  <div
+                    key={item.key}
+                    className="rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2 text-xs"
+                  >
+                    <span className={`font-semibold ${item.color}`}>{item.key}</span>
+                    <span className="text-slate-500"> · </span>
+                    <span className="text-slate-300">{item.label}</span>
+                  </div>
+                ))}
+              </div>
+            </>
+          ) : (
+            <p className="mt-2 text-xs text-slate-500">
+              Tip: abre esta guia solo cuando necesites recordar IP, TP, IL, TL, H y t.
+            </p>
+          )}
         </div>
 
-        {/* Connections */}
         <div className="rounded-3xl border border-white/10 bg-slate-950/70 p-4 text-sm leading-6 text-slate-300">
           <p className="text-xs uppercase tracking-[0.3em] text-slate-500">Conexiones directas</p>
           <p className="mt-2">
@@ -319,49 +575,94 @@ export function PertView() {
           </p>
           <p>
             <span className="font-semibold text-cyan-200">Ventana:</span>{' '}
-            {selectedNode ? `día ${selectedNode.IP} → día ${selectedNode.TP}` : '—'}
+            {selectedNode ? `dia ${selectedNode.IP} -> dia ${selectedNode.TP}` : '-'}
           </p>
         </div>
 
-        {/* Hint mode info */}
         <div className="rounded-3xl border border-emerald-400/15 bg-emerald-400/8 p-4 text-xs leading-5 text-emerald-100/80">
           {isCriticalRouteRevealed
-            ? 'Todos los valores visibles. Aristas críticas en rojo animado.'
-            : 'H, IL y TL ocultos. Presiona "Ver pista" en cada celda para revelar ese valor en este nodo.'}
+            ? 'Todos los valores visibles. Esta accion quita el bono de +10 puntos.'
+            : 'H, IL y TL ocultos. Cada pista usada descuenta 3 puntos.'}
         </div>
 
-        {/* Progress + reset */}
         <div className="rounded-3xl border border-white/10 bg-slate-950/70 p-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-xs uppercase tracking-[0.3em] text-slate-500">Progreso</p>
-              <p className="mt-1 text-sm text-slate-300">
-                <span className="font-bold text-white">{visitedCount}</span>
-                <span className="text-slate-400"> / {totalPlayableNodes} nodos ({progressPct}%)</span>
-              </p>
-            </div>
+          <p className="text-xs uppercase tracking-[0.3em] text-slate-500">Estado del intento</p>
+          <p className="mt-2 text-sm text-slate-300">
+            Exploracion: <span className="font-semibold text-white">{visitedCount}</span> / {totalPlayableNodes} ({progressPct}%)
+          </p>
+          <p className="text-sm text-slate-300">
+            Marcados como criticos: <span className="font-semibold text-white">{criticalGuesses.length}</span>
+          </p>
+          <p className="text-sm text-slate-300">
+            Pistas usadas: <span className="font-semibold text-white">{hintsUsed}</span>
+          </p>
+          <p className="mt-2 text-sm text-slate-300">
+            Puntaje actual: <span className="text-lg font-bold text-emerald-300">{currentScore}</span>
+          </p>
+
+          <div className="mt-3 flex gap-2">
             <button
               type="button"
-              onClick={resetProgress}
-              title="Reiniciar progreso y pistas"
-              className="flex h-9 w-9 items-center justify-center rounded-xl border border-white/10 bg-white/5 text-slate-400 transition hover:border-white/20 hover:bg-white/10 hover:text-white"
+              onClick={submitAttempt}
+              disabled={!currentPlayer}
+              className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl border border-emerald-400/30 bg-emerald-500/15 px-3 py-2 text-xs font-semibold text-emerald-100 transition hover:bg-emerald-500/25 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              <Trophy className="h-4 w-4" />
+              Enviar intento
+            </button>
+            <button
+              type="button"
+              onClick={resetRound}
+              title="Reiniciar ronda"
+              className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-white/10 bg-white/5 text-slate-400 transition hover:border-white/20 hover:bg-white/10 hover:text-white"
             >
               <RotateCcw className="h-4 w-4" />
             </button>
           </div>
-          <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-slate-700/50">
-            <div
-              className="h-full rounded-full bg-gradient-to-r from-cyan-500 to-emerald-500 transition-all duration-500"
-              style={{ width: `${progressPct}%` }}
-            />
+
+          {lastResult && (
+            <p className="mt-2 text-xs text-cyan-200">
+              Ultimo envio: {lastResult.playerName} obtuvo {lastResult.score} puntos.
+            </p>
+          )}
+        </div>
+
+        <div className="rounded-3xl border border-white/10 bg-slate-950/70 p-4">
+          <div className="mb-3 flex items-center justify-between">
+            <p className="text-xs uppercase tracking-[0.34em] text-slate-400">Ranking</p>
+            <button
+              type="button"
+              onClick={clearScoreboard}
+              className="text-[11px] text-slate-400 transition hover:text-white"
+            >
+              Limpiar
+            </button>
           </div>
+
+          {scoreboard.length === 0 ? (
+            <p className="text-xs text-slate-500">Sin intentos registrados.</p>
+          ) : (
+            <div className="space-y-2">
+              {scoreboard.slice(0, 8).map((entry, index) => (
+                <div key={entry.id} className="rounded-xl border border-white/10 bg-white/[0.03] p-2.5">
+                  <p className="text-xs font-semibold text-white">
+                    #{index + 1} {entry.playerName} · {entry.score} pts
+                  </p>
+                  <p className="mt-1 text-[11px] text-slate-400">
+                    Aciertos: {entry.hits} | Errores: {entry.falsePositives} | Faltantes: {entry.missed}
+                  </p>
+                  <p className="text-[11px] text-slate-500">
+                    Pistas: {entry.hintsUsed} | Exploracion: {entry.visitedPct}% | {entry.submittedAt}
+                  </p>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </aside>
     </section>
   )
 }
-
-// ── Sub-components ──────────────────────────────────────────
 
 function StatCard({
   label,
@@ -430,40 +731,31 @@ function HintCard({
   )
 }
 
-/** Mini diagram showing where each variable lives inside a PERT node circle */
 function NodeMap() {
   return (
-    <div className="flex items-center gap-5">
-      <div className="relative h-[90px] w-[90px] shrink-0 rounded-full border-2 border-slate-500/50 bg-slate-900/60">
+    <div className="flex items-center gap-4">
+      <div className="relative h-[86px] w-[86px] shrink-0 rounded-full border-2 border-slate-500/50 bg-slate-900/60">
         <div className="absolute left-1/2 top-0 h-full w-px -translate-x-1/2 bg-slate-500/50" />
         <div className="absolute left-0 top-1/2 h-px w-full -translate-y-1/2 bg-slate-500/50" />
+
         <span className="absolute left-1/2 top-[7px] -translate-x-1/2 text-[9px] font-bold text-emerald-300">t</span>
         <span className="absolute bottom-[7px] left-1/2 -translate-x-1/2 text-[9px] font-bold text-amber-300">H</span>
-        <span className="absolute left-[12px] top-[24px] text-[9px] font-bold text-slate-300">IP</span>
-        <span className="absolute right-[12px] top-[24px] text-[9px] font-bold text-slate-300">TP</span>
-        <span className="absolute bottom-[23px] left-[12px] text-[9px] font-bold text-amber-300/70">IL</span>
-        <span className="absolute bottom-[23px] right-[12px] text-[9px] font-bold text-amber-300/70">TL</span>
-        <div className="absolute left-1/2 top-1/2 flex h-[28px] w-[28px] -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-md border border-white/15 bg-slate-950 text-[9px] font-bold text-white">
+        <span className="absolute left-[11px] top-[22px] text-[9px] font-bold text-slate-300">IP</span>
+        <span className="absolute right-[11px] top-[22px] text-[9px] font-bold text-slate-300">TP</span>
+        <span className="absolute bottom-[21px] left-[11px] text-[9px] font-bold text-amber-300/80">IL</span>
+        <span className="absolute bottom-[21px] right-[11px] text-[9px] font-bold text-amber-300/80">TL</span>
+
+        <div className="absolute left-1/2 top-1/2 flex h-[26px] w-[26px] -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-md border border-white/15 bg-slate-950 text-[9px] font-bold text-white">
           ID
         </div>
       </div>
-      <div className="space-y-[5px] text-[10px] leading-4">
-        <NodeMapRow k="IP" label="Inicio Próximo" color="text-slate-300" />
-        <NodeMapRow k="TP" label="Term. Próxima" color="text-slate-300" />
-        <NodeMapRow k="t" label="Duración" color="text-emerald-300" />
-        <NodeMapRow k="H" label="Holgura" color="text-amber-300" />
-        <NodeMapRow k="IL" label="Inicio Lejano" color="text-amber-300/70" />
-        <NodeMapRow k="TL" label="Term. Lejana" color="text-amber-300/70" />
-      </div>
-    </div>
-  )
-}
 
-function NodeMapRow({ k, label, color }: { k: string; label: string; color: string }) {
-  return (
-    <div>
-      <span className={`font-bold ${color}`}>{k}</span>{' '}
-      <span className="text-slate-500">{label}</span>
+      <div className="text-[10px] leading-4 text-slate-400">
+        <p><span className="font-semibold text-cyan-200">IP</span> esquina superior izquierda</p>
+        <p><span className="font-semibold text-cyan-200">TP</span> esquina superior derecha</p>
+        <p><span className="font-semibold text-emerald-200">t</span> arriba al centro</p>
+        <p><span className="font-semibold text-amber-200">H</span> abajo al centro</p>
+      </div>
     </div>
   )
 }
