@@ -16,6 +16,7 @@ import {
 import { DroneOptimizationView } from './features/drone/DroneOptimizationView'
 import { GanttView } from './features/gantt/GanttView'
 import { PertView } from './features/pert/PertView'
+import { pertNodesAll } from './features/pert/pertData'
 import './App.css'
 
 type TabId = 'inicio' | 'pert' | 'gantt' | 'dron'
@@ -226,9 +227,13 @@ function App() {
 
 function HomeView() {
   const [selectedBlockTitle, setSelectedBlockTitle] = useState<string | null>(null)
+  const [isPertMatrixOpen, setIsPertMatrixOpen] = useState(false)
 
   const selectedBlock =
     ecosystemBlocks.find((block) => block.title === selectedBlockTitle) ?? null
+  const pertActivities = pertNodesAll.filter(
+    (node) => node.id !== 'Inicio' && node.id !== 'Fin',
+  )
 
   return (
     <section className="flex h-full min-h-[85vh] flex-col gap-6 rounded-[26px] border border-white/10 bg-white/[0.03] p-5 md:p-6">
@@ -240,6 +245,18 @@ function HomeView() {
           <p className="mt-4 max-w-3xl text-sm leading-7 text-slate-200 md:text-base">
             El objetivo central es diseñar, fabricar y desplegar un ecosistema tecnológico completamente open source (hardware y software), descentralizado y orientado al sector rural. Integra una red LoRaWAN, un UAS multiespectral, administración con Odoo ERP y un motor de inteligencia artificial para predicción climática e interpolación de datos.
           </p>
+          <div className="mt-5 flex flex-wrap items-center gap-3">
+            <button
+              type="button"
+              onClick={() => setIsPertMatrixOpen(true)}
+              className="inline-flex items-center gap-2 rounded-xl border border-cyan-300/30 bg-cyan-400/10 px-4 py-2 text-xs font-semibold uppercase tracking-[0.18em] text-cyan-100 transition hover:border-cyan-200/50 hover:bg-cyan-300/15"
+            >
+              Ver matriz PERT-CPM
+            </button>
+            <span className="text-xs text-cyan-100/80">
+              {pertActivities.length} actividades definidas para 1.1, 1.2 y 1.3
+            </span>
+          </div>
         </article>
 
         <article className="rounded-[22px] border border-white/10 bg-slate-950/70 p-5 md:p-6">
@@ -329,6 +346,88 @@ function HomeView() {
             <div className="mt-4 rounded-2xl border border-emerald-300/20 bg-emerald-400/10 p-4">
               <p className="text-xs uppercase tracking-[0.24em] text-emerald-200/90">Impacto</p>
               <p className="mt-3 text-sm leading-7 text-emerald-50">{selectedBlock.impact}</p>
+            </div>
+          </article>
+        </div>
+      ) : null}
+
+      {isPertMatrixOpen ? (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 p-4 backdrop-blur-sm"
+          role="presentation"
+          onClick={() => setIsPertMatrixOpen(false)}
+        >
+          <article
+            className="max-h-[88vh] w-full max-w-6xl overflow-auto rounded-3xl border border-white/15 bg-slate-950 p-5 shadow-[0_30px_80px_rgba(2,6,23,0.7)]"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Matriz de actividades PERT-CPM"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="mb-4 flex items-center justify-between gap-3">
+              <div>
+                <p className="text-xs uppercase tracking-[0.32em] text-cyan-200/80">
+                  Proyecto PERT-CPM · Área de formación
+                </p>
+                <h3 className="mt-2 text-xl font-semibold text-white md:text-2xl">
+                  Estructura de desglose, precedencias y relaciones
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsPertMatrixOpen(false)}
+                className="rounded-xl border border-white/15 bg-white/[0.03] px-3 py-1 text-xs uppercase tracking-[0.2em] text-slate-200 transition hover:border-white/30"
+              >
+                Cerrar
+              </button>
+            </div>
+
+            <div className="mb-4 rounded-2xl border border-cyan-400/20 bg-cyan-400/10 p-3 text-xs leading-6 text-cyan-100">
+              <p>1.1 Definición del proyecto y EDT con mínimo 20 actividades.</p>
+              <p>1.2 Desarrollo de relaciones entre actividades.</p>
+              <p>1.3 Decisión de precedencias y secuencias entre actividades.</p>
+            </div>
+
+            <div className="overflow-x-auto rounded-2xl border border-white/10">
+              <table className="min-w-[1100px] w-full text-left text-xs md:text-sm">
+                <thead className="bg-slate-900/90 text-slate-200">
+                  <tr>
+                    <th className="px-3 py-2 font-semibold">ID</th>
+                    <th className="px-3 py-2 font-semibold">Actividad</th>
+                    <th className="px-3 py-2 font-semibold">Predecesoras</th>
+                    <th className="px-3 py-2 font-semibold">Sucesoras</th>
+                    <th className="px-3 py-2 font-semibold">Duración (días)</th>
+                    <th className="px-3 py-2 font-semibold">Costo (COP)</th>
+                    <th className="px-3 py-2 font-semibold">Recurso</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {pertActivities.map((activity) => (
+                    <tr
+                      key={activity.id}
+                      className="border-t border-white/10 text-slate-200 odd:bg-white/[0.02]"
+                    >
+                      <td className="px-3 py-2 font-semibold text-cyan-100">{activity.id}</td>
+                      <td className="px-3 py-2 leading-6">{activity.actividad}</td>
+                      <td className="px-3 py-2">
+                        {activity.predecesoras.length > 0
+                          ? activity.predecesoras.join(', ')
+                          : 'Ninguna'}
+                      </td>
+                      <td className="px-3 py-2">
+                        {activity.sucesoras.length > 0
+                          ? activity.sucesoras.join(', ')
+                          : 'Ninguna'}
+                      </td>
+                      <td className="px-3 py-2">{activity.duracionDias}</td>
+                      <td className="px-3 py-2">
+                        {new Intl.NumberFormat('es-CO').format(activity.costoCOP)}
+                      </td>
+                      <td className="px-3 py-2">{activity.recurso}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           </article>
         </div>
