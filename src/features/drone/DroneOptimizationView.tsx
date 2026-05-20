@@ -1,4 +1,4 @@
-import { Bot, Sparkles, Zap } from 'lucide-react'
+import { BookOpen, Bot, CheckCircle2, Sigma, Sparkles, Zap } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import {
   transportCostMatrix,
@@ -11,6 +11,20 @@ import {
 function makeEmptyAllocation() {
   return transportSources.map(() => transportDestinations.map(() => 0))
 }
+
+const costMinimumAllocation = [
+  [120, 0, 0],
+  [0, 120, 30],
+  [0, 0, 100],
+  [10, 50, 20],
+]
+
+const vogelAllocation = [
+  [120, 0, 0],
+  [0, 100, 50],
+  [0, 20, 80],
+  [10, 50, 20],
+]
 
 function matrixCost(matrix: number[][]) {
   let total = 0
@@ -35,6 +49,7 @@ function columnUsage(matrix: number[][], columnIndex: number) {
 export function DroneOptimizationView() {
   const [allocation, setAllocation] = useState<number[][]>(() => makeEmptyAllocation())
   const [solverMessage, setSolverMessage] = useState<string | null>(null)
+  const [activeMethod, setActiveMethod] = useState<'manual' | 'min-cost' | 'vam' | 'solver'>('manual')
 
   const totalCost = useMemo(() => matrixCost(allocation), [allocation])
   const optimalCost = useMemo(() => transportSolverOptimalCost, [])
@@ -70,7 +85,9 @@ export function DroneOptimizationView() {
     columnIndex: number,
     rawValue: string,
   ) => {
-    const parsedValue = Number(rawValue)
+    const digitsOnly = rawValue.replace(/\D+/g, '')
+    const normalizedDigits = digitsOnly.replace(/^0+(?=\d)/, '')
+    const parsedValue = normalizedDigits === '' ? 0 : Number(normalizedDigits)
     const safeValue = Number.isNaN(parsedValue)
       ? 0
       : Math.max(0, Math.floor(parsedValue))
@@ -99,6 +116,19 @@ export function DroneOptimizationView() {
     setSolverMessage(
       `Victoria IA: el solver completó la asignación óptima. Ahorro estimado frente al intento de la clase: ${savedBattery.toLocaleString('es-CO')} minutos-costo equivalentes de batería.`,
     )
+    setActiveMethod('solver')
+  }
+
+  const applyCostMinimum = () => {
+    setAllocation(costMinimumAllocation.map((row) => [...row]))
+    setActiveMethod('min-cost')
+    setSolverMessage('Método de Costo Mínimo cargado. Usa esta base para comparar contra VAM y Solver.')
+  }
+
+  const applyVogel = () => {
+    setAllocation(vogelAllocation.map((row) => [...row]))
+    setActiveMethod('vam')
+    setSolverMessage('Método de Aproximación de Vogel (VAM) cargado para análisis comparativo.')
   }
 
   return (
@@ -126,10 +156,36 @@ export function DroneOptimizationView() {
         <div className="mb-4 flex flex-wrap items-center gap-3">
           <button
             type="button"
-            onClick={applySolver}
-            className="inline-flex min-h-14 items-center gap-3 rounded-2xl border border-fuchsia-300/25 bg-[linear-gradient(92deg,#7c3aed,#db2777,#f97316)] px-5 py-3 text-sm font-semibold uppercase tracking-[0.2em] text-white shadow-[0_14px_36px_rgba(147,51,234,0.35)] transition hover:scale-[1.01] hover:shadow-[0_18px_45px_rgba(236,72,153,0.42)]"
+            onClick={applyCostMinimum}
+            className={`inline-flex min-h-10 items-center gap-2 rounded-xl border px-3.5 py-2 text-[11px] font-semibold uppercase tracking-[0.1em] transition md:text-xs ${
+              activeMethod === 'min-cost'
+                ? 'border-cyan-300/50 bg-cyan-500/16 text-cyan-100'
+                : 'border-white/15 bg-white/[0.03] text-slate-200 hover:border-white/30 hover:bg-white/[0.06]'
+            }`}
           >
-            <Bot className="h-5 w-5" />
+            <Sigma className="h-4 w-4" />
+            Método Costo Mínimo
+          </button>
+
+          <button
+            type="button"
+            onClick={applyVogel}
+            className={`inline-flex min-h-10 items-center gap-2 rounded-xl border px-3.5 py-2 text-[11px] font-semibold uppercase tracking-[0.1em] transition md:text-xs ${
+              activeMethod === 'vam'
+                ? 'border-amber-300/50 bg-amber-500/16 text-amber-100'
+                : 'border-white/15 bg-white/[0.03] text-slate-200 hover:border-white/30 hover:bg-white/[0.06]'
+            }`}
+          >
+            <BookOpen className="h-4 w-4" />
+            Aproximación de Vogel
+          </button>
+
+          <button
+            type="button"
+            onClick={applySolver}
+            className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-fuchsia-300/25 bg-[linear-gradient(92deg,#7c3aed,#db2777,#f97316)] px-4 py-2 text-xs font-semibold uppercase tracking-[0.12em] text-white shadow-[0_10px_28px_rgba(147,51,234,0.35)] transition hover:scale-[1.01] hover:shadow-[0_14px_34px_rgba(236,72,153,0.42)]"
+          >
+            <Bot className="h-4 w-4" />
             Resolver con IA (Solver/Vogel)
             <Sparkles className="h-4 w-4" />
           </button>
@@ -139,8 +195,9 @@ export function DroneOptimizationView() {
             onClick={() => {
               setAllocation(makeEmptyAllocation())
               setSolverMessage(null)
+              setActiveMethod('manual')
             }}
-            className="inline-flex min-h-12 items-center gap-2 rounded-2xl border border-white/15 bg-white/[0.03] px-4 py-2 text-sm text-slate-200 transition hover:border-white/30 hover:bg-white/[0.06]"
+            className="inline-flex min-h-10 items-center gap-2 rounded-xl border border-white/15 bg-white/[0.03] px-3.5 py-2 text-xs text-slate-200 transition hover:border-white/30 hover:bg-white/[0.06]"
           >
             Reiniciar intento
           </button>
@@ -156,7 +213,7 @@ export function DroneOptimizationView() {
           </div>
         ) : null}
 
-        <div className="overflow-auto rounded-2xl border border-white/10">
+        <div className="transport-scroll overflow-auto rounded-2xl border border-white/10">
           <table className="min-w-[960px] w-full border-separate border-spacing-0">
             <thead>
               <tr className="bg-slate-900/95 text-left">
@@ -237,7 +294,7 @@ export function DroneOptimizationView() {
                               type="number"
                               min={0}
                               step={1}
-                              value={allocation[rowIndex][columnIndex]}
+                              value={String(allocation[rowIndex][columnIndex])}
                               onChange={(event) =>
                                 handleCellChange(
                                   rowIndex,
@@ -245,7 +302,7 @@ export function DroneOptimizationView() {
                                   event.target.value,
                                 )
                               }
-                              className="mt-2 w-full rounded-lg border border-white/15 bg-slate-950/70 px-3 py-2 text-sm font-semibold text-white outline-none transition focus:border-cyan-300/70 focus:ring-2 focus:ring-cyan-400/25"
+                              className="transport-number-input mt-2 w-full rounded-lg border border-white/15 bg-slate-950/70 px-3 py-2 text-sm font-semibold text-white outline-none transition focus:border-cyan-300/70 focus:ring-2 focus:ring-cyan-400/25"
                             />
                           </div>
                         </td>
@@ -287,6 +344,75 @@ export function DroneOptimizationView() {
             subtitle="Intento actual de la clase"
           />
         </div>
+
+        <div className="mt-5 grid gap-4 xl:grid-cols-2">
+          <article className="rounded-2xl border border-cyan-400/20 bg-cyan-400/10 p-4">
+            <p className="text-xs uppercase tracking-[0.24em] text-cyan-200/90">
+              Punto 2 · Modelo algebraico de transporte
+            </p>
+            <div className="mt-3 space-y-3 text-sm leading-7 text-slate-100">
+              <p>
+                <strong>Función objetivo:</strong> minimizar el costo total Z de asignación
+                entre gateways (i) y fincas (j).
+              </p>
+              <pre className="overflow-x-auto rounded-xl border border-white/10 bg-slate-950/70 p-3 text-xs leading-6 text-cyan-100">
+{`Min Z = sum_i sum_j c_ij * x_ij
+
+sujeto a:
+sum_j x_ij <= oferta_i,   para todo i
+sum_i x_ij = demanda_j,   para todo j
+x_ij >= 0`}
+              </pre>
+              <p>
+                Donde x_ij representa minutos enviados desde el Gateway i hacia la
+                Finca j, y c_ij es el costo unitario de transporte.
+              </p>
+            </div>
+          </article>
+
+          <article className="rounded-2xl border border-amber-400/20 bg-amber-400/10 p-4">
+            <p className="text-xs uppercase tracking-[0.24em] text-amber-200/90">
+              Método de Aproximación de Vogel (2.2)
+            </p>
+            <div className="mt-3 space-y-2 text-sm leading-7 text-slate-100">
+              <p>
+                VAM calcula penalizaciones por fila y columna para priorizar las celdas con
+                mayor impacto en costo antes de asignar.
+              </p>
+              <p>
+                En esta vista puedes cargar una solución VAM con el botón
+                <strong> Aproximación de Vogel</strong> y compararla contra Costo Mínimo y Solver.
+              </p>
+              <p>
+                <strong>Costo actual del plan cargado:</strong>{' '}
+                {formatCost(matrixCost(activeMethod === 'vam' ? vogelAllocation : allocation))}
+              </p>
+            </div>
+          </article>
+        </div>
+
+        <article className="mt-4 rounded-2xl border border-emerald-300/20 bg-emerald-400/10 p-4">
+          <p className="text-xs uppercase tracking-[0.24em] text-emerald-200/90">
+            2.3 Conclusiones de la actividad
+          </p>
+          <div className="mt-3 grid gap-2 text-sm leading-7 text-emerald-50 md:grid-cols-3">
+            <p className="rounded-xl border border-emerald-300/20 bg-emerald-950/35 p-3">
+              <CheckCircle2 className="mb-2 h-4 w-4 text-emerald-300" />
+              El modelado algebraico permite justificar técnica y cuantitativamente cada
+              decisión de asignación energética.
+            </p>
+            <p className="rounded-xl border border-emerald-300/20 bg-emerald-950/35 p-3">
+              <CheckCircle2 className="mb-2 h-4 w-4 text-emerald-300" />
+              VAM ofrece una solución inicial robusta y normalmente cercana al óptimo para
+              acelerar el análisis en clase.
+            </p>
+            <p className="rounded-xl border border-emerald-300/20 bg-emerald-950/35 p-3">
+              <CheckCircle2 className="mb-2 h-4 w-4 text-emerald-300" />
+              Comparar Manual vs Costo Mínimo vs VAM vs Solver fortalece la interpretación
+              de restricciones y costo total en Investigación de Operaciones.
+            </p>
+          </div>
+        </article>
       </div>
     </section>
   )

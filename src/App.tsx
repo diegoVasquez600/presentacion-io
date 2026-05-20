@@ -113,25 +113,25 @@ function App() {
   }
 
   return (
-    <div className="min-h-screen bg-transparent px-3 py-3 text-slate-100 md:px-5 md:py-5">
-      <div className="mx-auto flex h-[calc(100vh-1.5rem)] max-w-[1800px] overflow-hidden rounded-[28px] border border-white/10 bg-slate-950/70 shadow-[0_24px_80px_rgba(3,7,18,0.55)] backdrop-blur md:h-[calc(100vh-2.5rem)]">
-        <aside className="flex w-full shrink-0 flex-col justify-between border-b border-white/10 bg-slate-950/90 p-5 md:w-80 md:border-b-0 md:border-r md:p-6">
+    <div className="min-h-[100dvh] bg-transparent px-2 py-2 text-slate-100 md:px-5 md:py-5">
+      <div className="mx-auto flex min-h-[calc(100dvh-1rem)] max-w-[1800px] flex-col overflow-hidden rounded-[22px] border border-white/10 bg-slate-950/70 shadow-[0_24px_80px_rgba(3,7,18,0.55)] backdrop-blur md:h-[calc(100dvh-2.5rem)] md:min-h-0 md:flex-row md:rounded-[28px]">
+        <aside className="flex w-full shrink-0 flex-col justify-between border-b border-white/10 bg-slate-950/90 p-4 md:w-80 md:border-b-0 md:border-r md:p-6">
           <div>
-            <div className="mb-8 flex items-center gap-3">
-              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-400/12 text-emerald-300 ring-1 ring-inset ring-emerald-400/20">
-                <Package2 className="h-6 w-6" />
+            <div className="mb-4 flex items-center gap-3 md:mb-8">
+              <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-emerald-400/12 text-emerald-300 ring-1 ring-inset ring-emerald-400/20 md:h-12 md:w-12">
+                <Package2 className="h-5 w-5 md:h-6 md:w-6" />
               </div>
               <div>
-                <p className="text-xs uppercase tracking-[0.36em] text-slate-400">
+                <p className="text-[10px] uppercase tracking-[0.28em] text-slate-400 md:text-xs md:tracking-[0.36em]">
                   Sitio Web Interactivo
                 </p>
-                <h1 className="text-xl font-semibold text-white">
+                <h1 className="text-lg font-semibold text-white md:text-xl">
                   Plataforma del proyecto
                 </h1>
               </div>
             </div>
 
-            <nav className="space-y-2">
+            <nav className="grid grid-cols-1 gap-2 sm:grid-cols-2 md:grid-cols-1">
               {tabs.map((tab) => {
                 const Icon = tab.icon
                 const isActive = tab.id === activeTab
@@ -141,16 +141,16 @@ function App() {
                     key={tab.id}
                     type="button"
                     onClick={() => setActiveTab(tab.id)}
-                    className={`flex w-full items-center gap-3 rounded-2xl border px-4 py-3 text-left transition ${
+                    className={`flex w-full items-center gap-3 rounded-2xl border px-3 py-2.5 text-left transition md:px-4 md:py-3 ${
                       isActive
                         ? 'border-emerald-400/40 bg-emerald-400/12 text-white shadow-[0_0_0_1px_rgba(74,222,128,0.15)]'
                         : 'border-white/5 bg-white/0 text-slate-300 hover:border-white/10 hover:bg-white/5 hover:text-white'
                     }`}
                   >
-                    <Icon className="h-5 w-5" />
+                    <Icon className="h-4 w-4 md:h-5 md:w-5" />
                     <div>
-                      <span className="block font-medium">{tab.label}</span>
-                      <span className="block text-xs text-slate-400">
+                      <span className="block text-sm font-medium md:text-base">{tab.label}</span>
+                      <span className="hidden text-xs text-slate-400 md:block">
                         {tab.id === 'inicio' && 'Portada y narrativa general'}
                         {tab.id === 'pert' && 'Red, nodos, ruta crítica y juego'}
                         {tab.id === 'gantt' && 'Línea de tiempo y seguimiento'}
@@ -163,7 +163,7 @@ function App() {
             </nav>
           </div>
 
-          <div className="mt-8 rounded-3xl border border-cyan-400/20 bg-cyan-400/8 p-4 text-sm text-slate-300">
+          <div className="mt-4 hidden rounded-3xl border border-cyan-400/20 bg-cyan-400/8 p-4 text-sm text-slate-300 md:mt-8 md:block">
             <div className="mb-2 flex items-center gap-2 text-cyan-200">
               <CalendarRange className="h-4 w-4" />
               Modo presentación
@@ -175,13 +175,13 @@ function App() {
         </aside>
 
         <main className="flex flex-1 flex-col overflow-hidden">
-          <header className="border-b border-white/10 bg-slate-950/90 px-4 py-4 md:px-6">
+          <header className="border-b border-white/10 bg-slate-950/90 px-3 py-3 md:px-6 md:py-4">
             <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
               <div>
-                <p className="text-xs uppercase tracking-[0.32em] text-cyan-200/80">
+                <p className="text-[10px] uppercase tracking-[0.26em] text-cyan-200/80 md:text-xs md:tracking-[0.32em]">
                   Sustentación final · Investigación de Operaciones
                 </p>
-                <h1 className="mt-2 text-xl font-semibold text-white md:text-2xl">
+                <h1 className="mt-1.5 text-lg font-semibold text-white md:mt-2 md:text-2xl">
                   Plataforma de Planeación, Cronograma y Optimización Energética
                 </h1>
               </div>
@@ -189,7 +189,7 @@ function App() {
               <button
                 type="button"
                 onClick={() => setCreditsCollapsed((currentValue) => !currentValue)}
-                className="inline-flex items-center justify-center gap-2 rounded-2xl border border-white/15 bg-white/[0.03] px-4 py-2 text-sm font-medium text-slate-200 transition hover:border-white/25 hover:bg-white/[0.06]"
+                className="inline-flex items-center justify-center gap-2 rounded-2xl border border-white/15 bg-white/[0.03] px-3 py-2 text-xs font-medium text-slate-200 transition hover:border-white/25 hover:bg-white/[0.06] md:px-4 md:text-sm"
               >
                 Créditos del equipo
                 {creditsCollapsed ? (
@@ -216,7 +216,7 @@ function App() {
             ) : null}
           </header>
 
-          <div className="app-scroll flex-1 overflow-auto bg-gradient-to-br from-slate-950/30 via-slate-900/40 to-emerald-950/20 p-4 md:p-6">
+          <div className="app-scroll flex-1 overflow-auto bg-gradient-to-br from-slate-950/30 via-slate-900/40 to-emerald-950/20 p-3 md:p-6">
             <div className="h-full">{renderView()}</div>
           </div>
         </main>
@@ -237,9 +237,9 @@ function HomeView() {
   )
 
   return (
-    <section className="flex h-full min-h-[85vh] flex-col gap-6 rounded-[26px] border border-white/10 bg-white/[0.03] p-5 md:p-6">
-      <div className="grid gap-4 lg:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)]">
-        <article className="rounded-[22px] border border-cyan-300/15 bg-[radial-gradient(circle_at_top_left,rgba(14,165,233,0.2),rgba(15,23,42,0.4))] p-5 md:p-6">
+    <section className="flex min-h-0 flex-col gap-6 rounded-[22px] border border-white/10 bg-white/[0.03] p-4 md:min-h-[85vh] md:rounded-[26px] md:p-6">
+      <div className="grid items-stretch gap-4 lg:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)]">
+        <article className="h-full rounded-[22px] border border-cyan-300/15 bg-[radial-gradient(circle_at_top_left,rgba(14,165,233,0.2),rgba(15,23,42,0.4))] p-5 md:p-6">
           <h2 className="mt-3 text-3xl font-semibold text-white md:text-4xl">
             Plataforma Abierta de Datos Agrícolas e IoT.
           </h2>
@@ -267,7 +267,7 @@ function HomeView() {
           </div>
         </article>
 
-        <article className="rounded-[22px] border border-white/10 bg-slate-950/70 p-5 md:p-6">
+        <article className="h-full rounded-[22px] border border-white/10 bg-slate-950/70 p-5 md:p-6">
           <div className="mb-4 flex items-center gap-2 text-emerald-200">
             <CloudSun className="h-5 w-5" />
             Resumen operativo
@@ -281,7 +281,7 @@ function HomeView() {
         </article>
       </div>
 
-      <div className="grid flex-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
+      <div className="grid gap-4 sm:grid-cols-2 2xl:grid-cols-4">
         {ecosystemBlocks.map((block) => {
           const Icon = block.icon
 
@@ -290,26 +290,28 @@ function HomeView() {
               key={block.title}
               type="button"
               onClick={() => setSelectedBlockTitle(block.title)}
-              className={`group flex h-full min-h-[280px] flex-col rounded-[22px] border border-white/10 bg-gradient-to-br ${block.tone} p-5 text-left transition hover:-translate-y-0.5 hover:border-white/20`}
+              className={`group flex min-h-[240px] flex-col rounded-[22px] border border-white/10 bg-gradient-to-br ${block.tone} p-4 text-left transition hover:-translate-y-0.5 hover:border-white/20 md:min-h-[260px] md:p-5`}
             >
-              <div className="mb-5 inline-flex h-11 w-11 items-center justify-center rounded-xl border border-white/15 bg-white/[0.08] text-white">
+              <div className="mb-4 inline-flex h-10 w-10 items-center justify-center rounded-xl border border-white/15 bg-white/[0.08] text-white md:mb-5 md:h-11 md:w-11">
                 <Icon className="h-5 w-5" />
               </div>
-              <h3 className="text-lg font-semibold text-white">{block.title}</h3>
-              <p className="mt-3 text-sm leading-6 text-slate-200/90">
+              <h3 className="text-xl font-semibold leading-tight text-white md:text-[1.9rem]">
+                {block.title}
+              </h3>
+              <p className="mt-3 text-sm leading-6 text-slate-200/90 md:text-[1.03rem]">
                 {block.subtitle}
               </p>
-              <div className="mt-5 flex flex-wrap gap-2">
-                {block.tags.map((tag) => (
+              <div className="mt-4 flex flex-wrap gap-2">
+                {block.tags.map((tag, index) => (
                   <span
                     key={tag}
-                    className="rounded-full border border-white/15 bg-white/[0.05] px-2.5 py-1 text-[11px] uppercase tracking-[0.18em] text-slate-100/90"
+                    className={`rounded-full border border-white/15 bg-white/[0.05] px-2.5 py-1 text-[10px] uppercase tracking-[0.15em] text-slate-100/90 md:text-[11px] md:tracking-[0.18em] ${index === 2 ? 'hidden md:inline-flex' : 'inline-flex'}`}
                   >
                     {tag}
                   </span>
                 ))}
               </div>
-              <span className="mt-4 text-[11px] uppercase tracking-[0.2em] text-cyan-100/80">
+              <span className="mt-auto pt-4 text-[11px] uppercase tracking-[0.2em] text-cyan-100/80">
                 Clic para ampliar
               </span>
             </button>
@@ -448,7 +450,7 @@ function HomeView() {
           onClick={() => setIsSectionsRoadmapOpen(false)}
         >
           <article
-            className="max-h-[88vh] w-full max-w-5xl overflow-auto rounded-3xl border border-white/15 bg-slate-950 p-5 shadow-[0_30px_80px_rgba(2,6,23,0.7)]"
+            className="max-h-[88vh] w-full max-w-6xl overflow-auto rounded-3xl border border-white/15 bg-slate-950 p-5 shadow-[0_30px_80px_rgba(2,6,23,0.7)] md:p-6"
             role="dialog"
             aria-modal="true"
             aria-label="Hoja de ruta de secciones 2, 3 y 4"
@@ -472,8 +474,12 @@ function HomeView() {
               </button>
             </div>
 
+            <div className="mb-4 rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-3 text-xs text-slate-300">
+              Resumen para sustentación: esta hoja concentra los entregables críticos del documento maestro y su estado de implementación actual.
+            </div>
+
             <div className="grid gap-4 md:grid-cols-3">
-              <article className="rounded-2xl border border-cyan-400/20 bg-cyan-400/10 p-4">
+              <article className="flex h-full flex-col rounded-2xl border border-cyan-400/20 bg-cyan-400/10 p-4">
                 <p className="text-[11px] uppercase tracking-[0.24em] text-cyan-200/90">Sección 2</p>
                 <h4 className="mt-2 text-lg font-semibold text-white">Juego PERT-CPM</h4>
                 <ul className="mt-3 space-y-1.5 text-sm leading-6 text-slate-200">
@@ -481,9 +487,10 @@ function HomeView() {
                   <li>Selección de caminos con resaltado contextual.</li>
                   <li>Sistema de puntaje y revelado de ruta crítica.</li>
                 </ul>
+                <p className="mt-auto pt-3 text-xs uppercase tracking-[0.2em] text-cyan-100/80">Estado: Implementado</p>
               </article>
 
-              <article className="rounded-2xl border border-violet-400/20 bg-violet-400/10 p-4">
+              <article className="flex h-full flex-col rounded-2xl border border-violet-400/20 bg-violet-400/10 p-4">
                 <p className="text-[11px] uppercase tracking-[0.24em] text-violet-200/90">Sección 3</p>
                 <h4 className="mt-2 text-lg font-semibold text-white">Cronograma Gantt</h4>
                 <ul className="mt-3 space-y-1.5 text-sm leading-6 text-slate-200">
@@ -491,21 +498,24 @@ function HomeView() {
                   <li>Slider de día actual para tareas activas.</li>
                   <li>Tooltips con detalle técnico y predecesoras.</li>
                 </ul>
+                <p className="mt-auto pt-3 text-xs uppercase tracking-[0.2em] text-violet-100/80">Estado: Implementado</p>
               </article>
 
-              <article className="rounded-2xl border border-amber-400/20 bg-amber-400/10 p-4">
+              <article className="flex h-full flex-col rounded-2xl border border-amber-400/20 bg-amber-400/10 p-4">
                 <p className="text-[11px] uppercase tracking-[0.24em] text-amber-200/90">Sección 4</p>
                 <h4 className="mt-2 text-lg font-semibold text-white">Modelo de Transporte</h4>
                 <ul className="mt-3 space-y-1.5 text-sm leading-6 text-slate-200">
                   <li>Matriz 4x3 con validación reactiva oferta/demanda.</li>
-                  <li>Costo total dinámico en tiempo real.</li>
-                  <li>Comparación contra solución óptima del solver.</li>
+                  <li>2.1 Modelo algebraico: función objetivo y restricciones.</li>
+                  <li>2.2 Resolución mediante método de aproximación de Vogel (VAM).</li>
+                  <li>2.3 Conclusiones técnicas de la actividad y comparación de métodos.</li>
                 </ul>
+                <p className="mt-auto pt-3 text-xs uppercase tracking-[0.2em] text-amber-100/80">Estado: Implementado</p>
               </article>
             </div>
 
             <div className="mt-4 rounded-2xl border border-emerald-300/20 bg-emerald-400/10 p-4 text-sm leading-7 text-emerald-50">
-              Este panel permite sustentar rápidamente el avance por secciones del documento maestro sin modificar el comportamiento operativo de los módulos.
+              Este panel permite sustentar rápidamente el avance por secciones del documento maestro, con cobertura explícita de los puntos solicitados por la actividad (incluyendo modelo algebraico, VAM y conclusiones).
             </div>
           </article>
         </div>

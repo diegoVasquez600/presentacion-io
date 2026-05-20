@@ -675,7 +675,7 @@ export function PertView() {
           </div>
         </div>
 
-        <div className="h-[72vh] min-h-[460px] overflow-hidden rounded-[24px] border border-white/10 bg-[radial-gradient(circle_at_top,rgba(34,197,94,0.14),transparent_26%),linear-gradient(180deg,rgba(15,23,42,0.96),rgba(2,6,23,0.98))] xl:h-auto xl:min-h-[520px] xl:flex-1">
+        <div className="h-[56vh] min-h-[340px] overflow-hidden rounded-[24px] border border-white/10 bg-[radial-gradient(circle_at_top,rgba(34,197,94,0.14),transparent_26%),linear-gradient(180deg,rgba(15,23,42,0.96),rgba(2,6,23,0.98))] md:h-[66vh] md:min-h-[440px] xl:h-auto xl:min-h-[520px] xl:flex-1">
           <ReactFlow
             className="pert-flow"
             nodes={nodes}
