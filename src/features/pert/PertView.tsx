@@ -37,7 +37,7 @@ function loadVisited(): string[] {
 }
 
 export function PertView() {
-  const [selectedTaskId, setSelectedTaskId] = useState('A')
+  const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null)
   const [isCriticalRouteRevealed, setIsCriticalRouteRevealed] = useState(false)
   const [revealedHints, setRevealedHints] = useState<Record<string, string[]>>(loadHints)
   const [visitedNodes, setVisitedNodes] = useState<string[]>(loadVisited)
@@ -51,6 +51,10 @@ export function PertView() {
   }, [visitedNodes])
 
   function revealHint(field: string) {
+    if (!selectedTaskId) {
+      return
+    }
+
     setRevealedHints((prev) => ({
       ...prev,
       [selectedTaskId]: [...new Set([...(prev[selectedTaskId] ?? []), field])],
@@ -61,6 +65,9 @@ export function PertView() {
     setRevealedHints({})
     setVisitedNodes([])
     setIsCriticalRouteRevealed(false)
+    setSelectedTaskId(null)
+    localStorage.removeItem(HINT_KEY)
+    localStorage.removeItem(VISITED_KEY)
   }
 
   function isFieldShown(field: string): boolean {
@@ -70,16 +77,25 @@ export function PertView() {
   const criticalTaskIds = useMemo(() => new Set(pertRouteCritical), [])
   const totalPlayableNodes = pertNodesAll.filter((n) => n.id !== 'Inicio' && n.id !== 'Fin').length
 
-  const nodeConnectedIds = useMemo(() => {
-    const related = new Set<string>([selectedTaskId])
+  const explorationFocusIds = useMemo(
+    () => new Set<string>([...(selectedTaskId ? [selectedTaskId] : []), ...visitedNodes]),
+    [selectedTaskId, visitedNodes],
+  )
+
+  const exploredGraph = useMemo(() => {
+    const connectedNodeIds = new Set<string>(explorationFocusIds)
+    const connectedEdgeIds = new Set<string>()
+
     for (const edge of pertLinksAll) {
-      if (edge.source === selectedTaskId || edge.target === selectedTaskId) {
-        related.add(edge.source)
-        related.add(edge.target)
+      if (explorationFocusIds.has(edge.source) || explorationFocusIds.has(edge.target)) {
+        connectedNodeIds.add(edge.source)
+        connectedNodeIds.add(edge.target)
+        connectedEdgeIds.add(edge.id)
       }
     }
-    return related
-  }, [selectedTaskId])
+
+    return { connectedNodeIds, connectedEdgeIds }
+  }, [explorationFocusIds])
 
   const criticalEdgeIds = useMemo(() => {
     const ids = new Set<string>()
@@ -109,20 +125,25 @@ export function PertView() {
             showH: isCriticalRouteRevealed || nodeHints.includes('H'),
             showIL: isCriticalRouteRevealed || nodeHints.includes('IL'),
             showTL: isCriticalRouteRevealed || nodeHints.includes('TL'),
-            isPathFocused: nodeConnectedIds.has(task.id),
-            isDimmed: !nodeConnectedIds.has(task.id),
+            isPathFocused: exploredGraph.connectedNodeIds.has(task.id),
+            isDimmed: !exploredGraph.connectedNodeIds.has(task.id),
           },
           selected: task.id === selectedTaskId,
         }
       }),
-    [criticalTaskIds, isCriticalRouteRevealed, nodeConnectedIds, selectedTaskId, revealedHints],
+    [
+      criticalTaskIds,
+      exploredGraph.connectedNodeIds,
+      isCriticalRouteRevealed,
+      selectedTaskId,
+      revealedHints,
+    ],
   )
 
   const edges = useMemo<Edge[]>(
     () =>
       pertLinksAll.map((link) => {
-        const isConnected =
-          link.source === selectedTaskId || link.target === selectedTaskId
+        const isConnected = exploredGraph.connectedEdgeIds.has(link.id)
         const isCriticalEdge = isCriticalRouteRevealed && criticalEdgeIds.has(link.id)
         const edgeColor = isCriticalEdge
           ? '#dc2626'
@@ -146,15 +167,19 @@ export function PertView() {
           markerEnd: { type: MarkerType.ArrowClosed, color: edgeColor },
         }
       }),
-    [criticalEdgeIds, isCriticalRouteRevealed, selectedTaskId],
+    [criticalEdgeIds, exploredGraph.connectedEdgeIds, isCriticalRouteRevealed],
   )
 
-  const selectedNode = pertNodesAll.find((task) => task.id === selectedTaskId) ?? pertNodesAll[0]
-  const selectedNodeTitle = selectedNode.actividad.split(':')[0] ?? selectedNode.actividad
-  const directPredecessors = selectedNode.predecesoras
-  const directSuccessors = pertLinksAll
-    .filter((edge) => edge.source === selectedTaskId)
-    .map((edge) => edge.target)
+  const selectedNode = selectedTaskId
+    ? pertNodesAll.find((task) => task.id === selectedTaskId) ?? null
+    : null
+  const selectedNodeTitle = selectedNode
+    ? selectedNode.actividad.split(':')[0] ?? selectedNode.actividad
+    : 'Ninguno'
+  const directPredecessors = selectedNode ? selectedNode.predecesoras : []
+  const directSuccessors = selectedNode
+    ? pertLinksAll.filter((edge) => edge.source === selectedTaskId).map((edge) => edge.target)
+    : []
 
   const handleNodeClick: NodeMouseHandler = (_, node) => {
     setSelectedTaskId(node.id)
@@ -229,40 +254,45 @@ export function PertView() {
         <div className="rounded-3xl border border-white/10 bg-slate-950/70 p-4">
           <div className="flex items-start justify-between gap-2">
             <p className="text-xs uppercase tracking-[0.34em] text-slate-400">Nodo seleccionado</p>
-            {selectedNode.esCritica && isCriticalRouteRevealed && (
+            {selectedNode?.esCritica && isCriticalRouteRevealed && (
               <span className="shrink-0 rounded-full border border-red-400/40 bg-red-500/15 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-red-300">
                 Ruta crítica
               </span>
             )}
           </div>
           <h3 className="mt-2 text-xl font-semibold text-white">
-            {selectedNode.id} · {selectedNodeTitle}
+            {selectedNode ? `${selectedNode.id} · ${selectedNodeTitle}` : 'Sin selección'}
           </h3>
           <p className="mt-1 line-clamp-2 text-xs leading-5 text-slate-400">
-            {selectedNode.actividad}
+            {selectedNode
+              ? selectedNode.actividad
+              : 'Haz clic en un nodo para comenzar a explorar la red y calcular la ruta crítica.'}
           </p>
 
           <div className="mt-4 grid grid-cols-2 gap-2">
-            <StatCard label="Tiempo (t)" value={selectedNode.duracionDias} accent="emerald" />
-            <StatCard label="Inicio próximo" value={selectedNode.IP} accent="cyan" />
-            <StatCard label="Term. próxima" value={selectedNode.TP} accent="cyan" />
+            <StatCard label="Tiempo (t)" value={selectedNode?.duracionDias ?? null} accent="emerald" />
+            <StatCard label="Inicio próximo" value={selectedNode?.IP ?? null} accent="cyan" />
+            <StatCard label="Term. próxima" value={selectedNode?.TP ?? null} accent="cyan" />
             <HintCard
               label="Holgura (H)"
-              value={selectedNode.H}
+              value={selectedNode?.H ?? null}
               shown={isFieldShown('H')}
-              isCriticalZero={selectedNode.H === 0}
+              isCriticalZero={selectedNode?.H === 0}
+              disabled={!selectedNode}
               onReveal={() => revealHint('H')}
             />
             <HintCard
               label="Inicio lejano"
-              value={selectedNode.IL}
+              value={selectedNode?.IL ?? null}
               shown={isFieldShown('IL')}
+              disabled={!selectedNode}
               onReveal={() => revealHint('IL')}
             />
             <HintCard
               label="Term. lejana"
-              value={selectedNode.TL}
+              value={selectedNode?.TL ?? null}
               shown={isFieldShown('TL')}
+              disabled={!selectedNode}
               onReveal={() => revealHint('TL')}
             />
           </div>
@@ -289,7 +319,7 @@ export function PertView() {
           </p>
           <p>
             <span className="font-semibold text-cyan-200">Ventana:</span>{' '}
-            día {selectedNode.IP} → día {selectedNode.TP}
+            {selectedNode ? `día ${selectedNode.IP} → día ${selectedNode.TP}` : '—'}
           </p>
         </div>
 
