@@ -1,12 +1,13 @@
-import { BookOpen, Bot, CheckCircle2, Sigma, Sparkles, Zap } from 'lucide-react'
+import { BookOpen, CheckCircle2, Sigma, Zap } from 'lucide-react'
 import { useMemo, useState } from 'react'
+import { InlineMath, BlockMath } from 'react-katex'
 import {
   transportCostMatrix,
   transportDestinations,
-  transportSolverAllocation,
   transportSolverOptimalCost,
   transportSources,
 } from '../pert/pertData'
+import 'katex/dist/katex.min.css'
 
 function makeEmptyAllocation() {
   return transportSources.map(() => transportDestinations.map(() => 0))
@@ -21,9 +22,9 @@ const costMinimumAllocation = [
 
 const vogelAllocation = [
   [120, 0, 0],
-  [0, 100, 50],
-  [0, 20, 80],
-  [10, 50, 20],
+  [0, 150, 0],
+  [0, 0, 100],
+  [10, 20, 50],
 ]
 
 function matrixCost(matrix: number[][]) {
@@ -49,7 +50,7 @@ function columnUsage(matrix: number[][], columnIndex: number) {
 export function DroneOptimizationView() {
   const [allocation, setAllocation] = useState<number[][]>(() => makeEmptyAllocation())
   const [solverMessage, setSolverMessage] = useState<string | null>(null)
-  const [activeMethod, setActiveMethod] = useState<'manual' | 'min-cost' | 'vam' | 'solver'>('manual')
+  const [activeMethod, setActiveMethod] = useState<'manual' | 'min-cost' | 'vam'>('manual')
 
   const totalCost = useMemo(() => matrixCost(allocation), [allocation])
   const optimalCost = useMemo(() => transportSolverOptimalCost, [])
@@ -107,28 +108,18 @@ export function DroneOptimizationView() {
     setSolverMessage(null)
   }
 
-  const applySolver = () => {
-    const classCost = matrixCost(allocation)
-    const savedBattery = Math.max(0, classCost - optimalCost)
 
-    setAllocation(transportSolverAllocation.map((row) => [...row]))
-
-    setSolverMessage(
-      `Victoria IA: el solver completó la asignación óptima. Ahorro estimado frente al intento de la clase: ${savedBattery.toLocaleString('es-CO')} minutos-costo equivalentes de batería.`,
-    )
-    setActiveMethod('solver')
-  }
 
   const applyCostMinimum = () => {
     setAllocation(costMinimumAllocation.map((row) => [...row]))
     setActiveMethod('min-cost')
-    setSolverMessage('Método de Costo Mínimo cargado. Usa esta base para comparar contra VAM y Solver.')
+    setSolverMessage('Método de Costo Mínimo cargado. Costo total: 6510 minutos-costo.')
   }
 
   const applyVogel = () => {
     setAllocation(vogelAllocation.map((row) => [...row]))
     setActiveMethod('vam')
-    setSolverMessage('Método de Aproximación de Vogel (VAM) cargado para análisis comparativo.')
+    setSolverMessage('Método de Aproximación de Vogel (VAM) cargado. Costo total: 5970 minutos-costo (más óptimo que Costo Mínimo).')
   }
 
   return (
@@ -178,16 +169,6 @@ export function DroneOptimizationView() {
           >
             <BookOpen className="h-4 w-4" />
             Aproximación de Vogel
-          </button>
-
-          <button
-            type="button"
-            onClick={applySolver}
-            className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-fuchsia-300/25 bg-[linear-gradient(92deg,#7c3aed,#db2777,#f97316)] px-4 py-2 text-xs font-semibold uppercase tracking-[0.12em] text-white shadow-[0_10px_28px_rgba(147,51,234,0.35)] transition hover:scale-[1.01] hover:shadow-[0_14px_34px_rgba(236,72,153,0.42)]"
-          >
-            <Bot className="h-4 w-4" />
-            Resolver con IA (Solver/Vogel)
-            <Sparkles className="h-4 w-4" />
           </button>
 
           <button
@@ -352,20 +333,27 @@ export function DroneOptimizationView() {
             </p>
             <div className="mt-3 space-y-3 text-sm leading-7 text-slate-100">
               <p>
-                <strong>Función objetivo:</strong> minimizar el costo total Z de asignación
-                entre gateways (i) y fincas (j).
+                <strong>Función objetivo:</strong> minimizar el costo total de asignación
+                entre gateways y fincas.
               </p>
-              <pre className="overflow-x-auto rounded-xl border border-white/10 bg-slate-950/70 p-3 text-xs leading-6 text-cyan-100">
-{`Min Z = sum_i sum_j c_ij * x_ij
-
-sujeto a:
-sum_j x_ij <= oferta_i,   para todo i
-sum_i x_ij = demanda_j,   para todo j
-x_ij >= 0`}
-              </pre>
+              <div className="overflow-x-auto rounded-xl border border-white/10 bg-slate-950/70 p-4">
+                <BlockMath math={"\\text{Minimizar} \\quad Z = \\sum_i \\sum_j c_{ij} \\cdot x_{ij}"} />
+              </div>
+              <p className="text-xs uppercase tracking-[0.18em] text-cyan-300">Sujeto a restricciones:</p>
+              <div className="space-y-2 rounded-xl border border-white/10 bg-slate-950/70 p-4 text-xs leading-6">
+                <div className="overflow-x-auto">
+                  <BlockMath math={"\\sum_j x_{ij} \\leq \\text{oferta}_i \\quad \\forall i"} />
+                </div>
+                <div className="overflow-x-auto">
+                  <BlockMath math={"\\sum_i x_{ij} = \\text{demanda}_j \\quad \\forall j"} />
+                </div>
+                <div className="overflow-x-auto">
+                  <BlockMath math={"x_{ij} \\geq 0"} />
+                </div>
+              </div>
               <p>
-                Donde x_ij representa minutos enviados desde el Gateway i hacia la
-                Finca j, y c_ij es el costo unitario de transporte.
+                Donde <InlineMath math={"x_{ij}"} /> representa minutos enviados desde el Gateway <InlineMath math={"i"} /> hacia la
+                Finca <InlineMath math={"j"} />, y <InlineMath math={"c_{ij}"} /> es el costo unitario de transporte.
               </p>
             </div>
           </article>
@@ -399,17 +387,17 @@ x_ij >= 0`}
             <p className="rounded-xl border border-emerald-300/20 bg-emerald-950/35 p-3">
               <CheckCircle2 className="mb-2 h-4 w-4 text-emerald-300" />
               El modelado algebraico permite justificar técnica y cuantitativamente cada
-              decisión de asignación energética.
+              decisión de asignación energética desde gateways hacia fincas.
             </p>
             <p className="rounded-xl border border-emerald-300/20 bg-emerald-950/35 p-3">
               <CheckCircle2 className="mb-2 h-4 w-4 text-emerald-300" />
-              VAM ofrece una solución inicial robusta y normalmente cercana al óptimo para
-              acelerar el análisis en clase.
+              La Aproximación de Vogel (VAM) es más óptima que Costo Mínimo:
+              VAM = 5970 vs Costo Mínimo = 6510. Diferencia: 540 unidades de ahorro.
             </p>
             <p className="rounded-xl border border-emerald-300/20 bg-emerald-950/35 p-3">
               <CheckCircle2 className="mb-2 h-4 w-4 text-emerald-300" />
-              Comparar Manual vs Costo Mínimo vs VAM vs Solver fortalece la interpretación
-              de restricciones y costo total en Investigación de Operaciones.
+              Comparar métodos heurísticos mejora la comprensión de soluciones
+              factibles vs óptimas en problemas de transporte balanceados.
             </p>
           </div>
         </article>
