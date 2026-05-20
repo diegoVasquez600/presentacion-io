@@ -9,6 +9,7 @@ import {
 } from '@xyflow/react'
 import '@xyflow/react/dist/style.css'
 import {
+  CircleHelp,
   CheckCircle2,
   ChevronDown,
   ChevronUp,
@@ -117,6 +118,7 @@ export function PertView() {
   const [currentPlayer, setCurrentPlayer] = useState(loadCurrentPlayer)
   const [lastResult, setLastResult] = useState<ScoreEntry | null>(null)
   const [isGuideOpen, setIsGuideOpen] = useState(loadGuideOpen)
+  const [isHelpOpen, setIsHelpOpen] = useState(false)
   const [isSubmittingAttempt, setIsSubmittingAttempt] = useState(false)
   const submitLockRef = useRef(false)
 
@@ -507,19 +509,32 @@ export function PertView() {
             </p>
           </div>
 
-          <button
-            type="button"
-            onClick={() => setIsCriticalRouteRevealed((v) => !v)}
-            className={`inline-flex min-h-14 shrink-0 items-center justify-center gap-3 rounded-2xl border px-5 py-4 text-sm font-semibold uppercase tracking-[0.24em] transition md:text-base ${
-              isCriticalRouteRevealed
-                ? 'border-red-400/50 bg-red-500/15 text-red-100 shadow-[0_0_0_1px_rgba(248,113,113,0.16)]'
-                : 'border-red-300/20 bg-red-500/10 text-red-200 hover:border-red-300/40 hover:bg-red-500/15'
-            }`}
-            aria-pressed={isCriticalRouteRevealed}
-          >
-            <Flame className="h-5 w-5" />
-            {isCriticalRouteRevealed ? 'Ocultar ruta crítica' : 'Revelar holguras y ruta crítica'}
-          </button>
+          <div className="flex shrink-0 items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setIsHelpOpen(true)}
+              className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-cyan-300/20 bg-cyan-500/10 px-3 py-2.5 text-xs font-semibold uppercase tracking-[0.12em] text-cyan-100 transition hover:border-cyan-300/35 hover:bg-cyan-500/15 md:text-sm"
+              title="Ver ayuda del juego"
+            >
+              <CircleHelp className="h-4 w-4" />
+              Ayuda
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setIsCriticalRouteRevealed((v) => !v)}
+              className={`inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border px-4 py-2.5 text-xs font-semibold uppercase tracking-[0.14em] transition md:text-sm ${
+                isCriticalRouteRevealed
+                  ? 'border-red-400/50 bg-red-500/15 text-red-100 shadow-[0_0_0_1px_rgba(248,113,113,0.16)]'
+                  : 'border-red-300/20 bg-red-500/10 text-red-200 hover:border-red-300/40 hover:bg-red-500/15'
+              }`}
+              aria-pressed={isCriticalRouteRevealed}
+              title="Muestra u oculta holguras y ruta crítica"
+            >
+              <Flame className="h-4 w-4" />
+              {isCriticalRouteRevealed ? 'Ocultar ruta crítica' : 'Mostrar ruta crítica'}
+            </button>
+          </div>
         </div>
 
         <div className="h-[72vh] min-h-[460px] overflow-hidden rounded-[24px] border border-white/10 bg-[radial-gradient(circle_at_top,rgba(34,197,94,0.14),transparent_26%),linear-gradient(180deg,rgba(15,23,42,0.96),rgba(2,6,23,0.98))] xl:h-auto xl:min-h-[520px] xl:flex-1">
@@ -778,6 +793,67 @@ export function PertView() {
           )}
         </div>
       </aside>
+
+      {isHelpOpen && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 p-4 backdrop-blur-sm"
+          role="presentation"
+          onClick={() => setIsHelpOpen(false)}
+        >
+          <article
+            className="w-full max-w-2xl rounded-3xl border border-white/15 bg-slate-950 p-5 shadow-[0_30px_80px_rgba(2,6,23,0.72)] md:p-6"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Ayuda del juego de ruta crítica"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <p className="text-xs uppercase tracking-[0.32em] text-cyan-200/80">Ayuda del juego</p>
+                <h3 className="mt-2 text-xl font-semibold text-white">Como jugar el laberinto de la ruta critica</h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsHelpOpen(false)}
+                className="rounded-xl border border-white/15 bg-white/[0.03] px-3 py-1 text-xs uppercase tracking-[0.2em] text-slate-200 transition hover:border-white/30"
+              >
+                Cerrar
+              </button>
+            </div>
+
+            <div className="mt-4 space-y-4 text-sm text-slate-300">
+              <div className="rounded-2xl border border-cyan-300/20 bg-cyan-400/8 p-3">
+                <p className="font-semibold text-cyan-100">Objetivo</p>
+                <p className="mt-1 leading-6">Identificar la ruta critica marcando nodos en el orden correcto y enviando tu intento con el mejor puntaje posible.</p>
+              </div>
+
+              <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-3">
+                <p className="font-semibold text-white">Flujo de uso</p>
+                <ol className="mt-2 list-decimal space-y-1.5 pl-5 text-slate-300">
+                  <li>Escribe tu nombre y pulsa Iniciar.</li>
+                  <li>Haz clic en nodos para explorarlos.</li>
+                  <li>Usa Marcar como critico sobre los nodos que consideres de la ruta critica.</li>
+                  <li>Si dudas, usa pistas H, IL y TL con penalizacion.</li>
+                  <li>Pulsa Enviar intento para guardar tu resultado en el ranking.</li>
+                </ol>
+              </div>
+
+              <div className="rounded-2xl border border-emerald-300/20 bg-emerald-400/8 p-3">
+                <p className="font-semibold text-emerald-100">Reglas de puntaje</p>
+                <ul className="mt-2 list-disc space-y-1.5 pl-5 text-slate-300">
+                  <li>+20 por cada acierto.</li>
+                  <li>-8 por cada falso positivo (nodo marcado que no era critico).</li>
+                  <li>-5 por cada nodo critico faltante.</li>
+                  <li>-3 por cada pista usada.</li>
+                  <li>+10 de bono si no revelas la ruta critica completa.</li>
+                </ul>
+              </div>
+
+              <p className="text-xs text-slate-400">Tip: usar Mostrar ruta critica ayuda a estudiar, pero te quita el bono de +10 en la ronda activa.</p>
+            </div>
+          </article>
+        </div>
+      )}
     </section>
   )
 }
