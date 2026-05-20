@@ -36,11 +36,22 @@
     filter 220ms ease;
 }
 
+.edge-path-focus .react-flow__edge-path {
+  stroke: #38bdf8;
+  stroke-width: 3.2;
+  filter: drop-shadow(0 0 8px rgba(56, 189, 248, 0.55));
+}
+
+.edge-dimmed .react-flow__edge-path {
+  stroke: rgba(148, 163, 184, 0.22);
+  stroke-width: 1.8;
+}
+
 .edge-critical-revealed .react-flow__edge-path {
-  stroke: #ff3b30;
+  stroke: #dc2626;
   stroke-width: 4;
   stroke-dasharray: 12 10;
-  filter: drop-shadow(0 0 10px rgba(255, 59, 48, 0.9));
+  filter: drop-shadow(0 0 10px rgba(220, 38, 38, 0.95));
   animation: pert-edge-flow 900ms linear infinite;
 }
 
@@ -63,6 +74,16 @@
   transform: scale(1.03);
   border-color: #38bdf8;
   box-shadow: 0 0 0 4px rgba(56, 189, 248, 0.18);
+}
+
+.pert-node-shell.is-path-focused {
+  border-color: rgba(56, 189, 248, 0.75);
+  box-shadow: 0 0 0 4px rgba(56, 189, 248, 0.14);
+}
+
+.pert-node-shell.is-dimmed {
+  opacity: 0.22;
+  transform: scale(0.98);
 }
 
 .pert-node-shell.is-critical {
@@ -111,4 +132,29 @@
 
 .gantt-bar:hover {
   filter: brightness(1.08);
+}
+
+.app-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(125, 211, 252, 0.35) rgba(15, 23, 42, 0.35);
+}
+
+.app-scroll::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+.app-scroll::-webkit-scrollbar-track {
+  background: rgba(15, 23, 42, 0.3);
+  border-radius: 999px;
+}
+
+.app-scroll::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, rgba(125, 211, 252, 0.45), rgba(45, 212, 191, 0.35));
+  border: 2px solid rgba(15, 23, 42, 0.35);
+  border-radius: 999px;
+}
+
+.app-scroll::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, rgba(125, 211, 252, 0.7), rgba(45, 212, 191, 0.55));
 }

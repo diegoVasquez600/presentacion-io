@@ -9,6 +9,11 @@ export type PertNodeData = {
   IL: string
   TL: string
   isCritical: boolean
+  showH: boolean
+  showIL: boolean
+  showTL: boolean
+  isPathFocused: boolean
+  isDimmed: boolean
 }
 
 const hiddenHandleStyle = {
@@ -30,6 +35,8 @@ export function CustomPertNode({
       <div
         className={`pert-node-shell ${selected ? 'is-selected' : ''} ${
           data.isCritical ? 'is-critical' : ''
+        } ${data.isPathFocused ? 'is-path-focused' : ''} ${
+          data.isDimmed ? 'is-dimmed' : ''
         }`}
       >
         <div className="absolute left-1/2 top-0 h-full w-px -translate-x-1/2 bg-slate-400/80" />
@@ -38,8 +45,12 @@ export function CustomPertNode({
         <span className="absolute left-1/2 top-3 -translate-x-1/2 text-sm font-semibold text-emerald-200">
           {data.t}
         </span>
-        <span className="absolute bottom-3 left-1/2 -translate-x-1/2 text-sm font-semibold text-amber-200">
-          {data.H}
+        <span
+          className={`absolute bottom-3 left-1/2 -translate-x-1/2 text-sm font-semibold text-amber-200 transition-all ${
+            data.showH ? 'opacity-100' : 'opacity-95'
+          }`}
+        >
+          {data.showH ? data.H : '?'}
         </span>
         <span className="absolute left-[24%] top-[27%] -translate-x-1/2 -translate-y-1/2 text-sm font-medium text-slate-200">
           {data.IP}
@@ -48,10 +59,10 @@ export function CustomPertNode({
           {data.TP}
         </span>
         <span className="absolute left-[24%] top-[73%] -translate-x-1/2 -translate-y-1/2 text-sm font-medium text-slate-200">
-          {data.IL}
+          {data.showIL ? data.IL : '?'}
         </span>
         <span className="absolute left-[76%] top-[73%] -translate-x-1/2 -translate-y-1/2 text-sm font-medium text-slate-200">
-          {data.TL}
+          {data.showTL ? data.TL : '?'}
         </span>
 
         <div className="absolute left-1/2 top-1/2 flex h-[52px] w-[52px] -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-lg border border-white/10 bg-slate-950 text-xl font-bold text-white shadow-[0_10px_30px_rgba(2,6,23,0.55)]">

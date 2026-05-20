@@ -1,47 +1,15 @@
 import { Bot, Sparkles, Zap } from 'lucide-react'
 import { useMemo, useState } from 'react'
-
-type Gateway = {
-  id: string
-  name: string
-  offer: number
-}
-
-type Destination = {
-  id: string
-  name: string
-  demand: number
-}
-
-const gateways: Gateway[] = [
-  { id: 'G1', name: 'Gateway Norte', offer: 120 },
-  { id: 'G2', name: 'Gateway Centro', offer: 95 },
-  { id: 'G3', name: 'Gateway Valle', offer: 110 },
-  { id: 'G4', name: 'Gateway Sur', offer: 85 },
-]
-
-const destinations: Destination[] = [
-  { id: 'F1', name: 'Finca Aurora', demand: 130 },
-  { id: 'F2', name: 'Finca Horizonte', demand: 140 },
-  { id: 'F3', name: 'Finca Delta', demand: 140 },
-]
-
-const displacementCost: number[][] = [
-  [24, 37, 15],
-  [42, 18, 29],
-  [16, 44, 33],
-  [28, 21, 40],
-]
-
-const optimalAllocation: number[][] = [
-  [120, 0, 0],
-  [10, 85, 0],
-  [0, 55, 55],
-  [0, 0, 85],
-]
+import {
+  transportCostMatrix,
+  transportDestinations,
+  transportSolverAllocation,
+  transportSolverOptimalCost,
+  transportSources,
+} from '../pert/pertData'
 
 function makeEmptyAllocation() {
-  return gateways.map(() => destinations.map(() => 0))
+  return transportSources.map(() => transportDestinations.map(() => 0))
 }
 
 function matrixCost(matrix: number[][]) {
@@ -49,7 +17,7 @@ function matrixCost(matrix: number[][]) {
 
   for (let rowIndex = 0; rowIndex < matrix.length; rowIndex += 1) {
     for (let columnIndex = 0; columnIndex < matrix[rowIndex].length; columnIndex += 1) {
-      total += matrix[rowIndex][columnIndex] * displacementCost[rowIndex][columnIndex]
+      total += matrix[rowIndex][columnIndex] * transportCostMatrix[rowIndex][columnIndex]
     }
   }
 
@@ -69,25 +37,31 @@ export function DroneOptimizationView() {
   const [solverMessage, setSolverMessage] = useState<string | null>(null)
 
   const totalCost = useMemo(() => matrixCost(allocation), [allocation])
-  const optimalCost = useMemo(() => matrixCost(optimalAllocation), [])
+  const optimalCost = useMemo(() => transportSolverOptimalCost, [])
 
   const rowTotals = useMemo(
-    () => gateways.map((_, rowIndex) => rowUsage(allocation, rowIndex)),
+    () => transportSources.map((_, rowIndex) => rowUsage(allocation, rowIndex)),
     [allocation],
   )
 
   const columnTotals = useMemo(
-    () => destinations.map((_, columnIndex) => columnUsage(allocation, columnIndex)),
+    () =>
+      transportDestinations.map((_, columnIndex) =>
+        columnUsage(allocation, columnIndex),
+      ),
     [allocation],
   )
 
   const exceededRows = useMemo(
-    () => rowTotals.map((value, index) => value > gateways[index].offer),
+    () => rowTotals.map((value, index) => value > transportSources[index].offer),
     [rowTotals],
   )
 
   const exceededColumns = useMemo(
-    () => columnTotals.map((value, index) => value > destinations[index].demand),
+    () =>
+      columnTotals.map(
+        (value, index) => value > transportDestinations[index].demand,
+      ),
     [columnTotals],
   )
 
@@ -120,7 +94,7 @@ export function DroneOptimizationView() {
     const classCost = matrixCost(allocation)
     const savedBattery = Math.max(0, classCost - optimalCost)
 
-    setAllocation(optimalAllocation.map((row) => [...row]))
+    setAllocation(transportSolverAllocation.map((row) => [...row]))
 
     setSolverMessage(
       `Victoria IA: el solver completó la asignación óptima. Ahorro estimado frente al intento de la clase: ${savedBattery.toLocaleString('es-CO')} minutos-costo equivalentes de batería.`,
@@ -189,7 +163,7 @@ export function DroneOptimizationView() {
                 <th className="w-56 border-b border-r border-white/10 px-4 py-3 text-xs uppercase tracking-[0.22em] text-slate-400">
                   Gateway / Oferta
                 </th>
-                {destinations.map((destination, index) => {
+                {transportDestinations.map((destination, index) => {
                   const isExceeded = exceededColumns[index]
 
                   return (
@@ -221,7 +195,7 @@ export function DroneOptimizationView() {
             </thead>
 
             <tbody>
-              {gateways.map((gateway, rowIndex) => {
+              {transportSources.map((gateway, rowIndex) => {
                 const isRowExceeded = exceededRows[rowIndex]
                 const rowAssigned = rowTotals[rowIndex]
 
@@ -244,8 +218,8 @@ export function DroneOptimizationView() {
                       </p>
                     </td>
 
-                    {destinations.map((destination, columnIndex) => {
-                      const costValue = displacementCost[rowIndex][columnIndex]
+                    {transportDestinations.map((destination, columnIndex) => {
+                      const costValue = transportCostMatrix[rowIndex][columnIndex]
 
                       return (
                         <td
@@ -299,12 +273,12 @@ export function DroneOptimizationView() {
         <div className="mt-4 grid gap-3 md:grid-cols-3">
           <StatusCard
             title="Oferta total"
-            value={`${gateways.reduce((sum, item) => sum + item.offer, 0)} min`}
+            value={`${transportSources.reduce((sum, item) => sum + item.offer, 0)} min`}
             subtitle="Capacidad total disponible"
           />
           <StatusCard
             title="Demanda total"
-            value={`${destinations.reduce((sum, item) => sum + item.demand, 0)} min`}
+            value={`${transportDestinations.reduce((sum, item) => sum + item.demand, 0)} min`}
             subtitle="Minutos requeridos por fincas"
           />
           <StatusCard

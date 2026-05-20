@@ -1,3 +1,58 @@
+import masterData from '../../data/masterData.json'
+
+type MasterNode = {
+  id: string
+  actividad: string
+  predecesoras: string[]
+  sucesoras: string[]
+  duracionDias: number
+  costoCOP: number
+  recurso: string
+  IP: number
+  TP: number
+  IL: number
+  TL: number
+  H: number
+  esCritica: boolean
+  position: {
+    x: number
+    y: number
+  }
+}
+
+type MasterEdge = {
+  from: string
+  to: string
+}
+
+type TransportNode = {
+  id: string
+  nombre: string
+  oferta?: number
+  demanda?: number
+}
+
+type MasterData = {
+  pertCpm: {
+    rutaCritica: string[]
+    nodos: MasterNode[]
+    aristas: MasterEdge[]
+  }
+  transporte: {
+    fuentes: Array<TransportNode & { oferta: number }>
+    destinos: Array<TransportNode & { demanda: number }>
+    costos: Record<string, Record<string, number>>
+    soluciones: {
+      solverSimplex: {
+        asignacion: Record<string, Record<string, number>>
+        costoTotal: number
+      }
+    }
+  }
+}
+
+const data = masterData as MasterData
+
 export type PertTask = {
   id: string
   name: string
@@ -10,6 +65,8 @@ export type PertTask = {
   TP: number
   IL: number
   TL: number
+  predecesoras: string[]
+  esCritica: boolean
   position: {
     x: number
     y: number
@@ -22,320 +79,85 @@ export type PertLink = {
   target: string
 }
 
-export const pertTasks: PertTask[] = [
-  {
-    id: 'A',
-    name: 'Inicio del proyecto',
-    description: 'Alineación inicial del alcance y arranque del plan de trabajo.',
-    resource: 'Jefe de proyecto',
-    cost: 120000,
-    t: 3,
-    H: 0,
-    IP: 0,
-    TP: 3,
-    IL: 0,
-    TL: 3,
-    position: { x: 0, y: 240 },
-  },
-  {
-    id: 'B',
-    name: 'Recopilar fuentes',
-    description: 'Inventario de documentos, restricciones y fuentes de entrada.',
-    resource: 'Documentalista',
-    cost: 95000,
-    t: 4,
-    H: 2,
-    IP: 3,
-    TP: 7,
-    IL: 5,
-    TL: 9,
-    position: { x: 250, y: 40 },
-  },
-  {
-    id: 'C',
-    name: 'Definir requerimientos',
-    description: 'Consolidación del alcance funcional y criterios de aceptación.',
-    resource: 'Analista funcional',
-    cost: 180000,
-    t: 5,
-    H: 0,
-    IP: 3,
-    TP: 8,
-    IL: 3,
-    TL: 8,
-    position: { x: 250, y: 220 },
-  },
-  {
-    id: 'D',
-    name: 'Mapear actores',
-    description: 'Identificación de interesados, responsables y validadores.',
-    resource: 'Consultor PMO',
-    cost: 130000,
-    t: 6,
-    H: 4,
-    IP: 3,
-    TP: 9,
-    IL: 7,
-    TL: 13,
-    position: { x: 250, y: 400 },
-  },
-  {
-    id: 'E',
-    name: 'Preparar insumos',
-    description: 'Organización del material base para análisis posterior.',
-    resource: 'Asistente de proyecto',
-    cost: 90000,
-    t: 4,
-    H: 3,
-    IP: 7,
-    TP: 11,
-    IL: 10,
-    TL: 14,
-    position: { x: 520, y: 20 },
-  },
-  {
-    id: 'F',
-    name: 'Diseñar flujo principal',
-    description: 'Modelo central del proceso y dependencias relevantes.',
-    resource: 'Arquitecto de procesos',
-    cost: 260000,
-    t: 6,
-    H: 0,
-    IP: 8,
-    TP: 14,
-    IL: 8,
-    TL: 14,
-    position: { x: 520, y: 160 },
-  },
-  {
-    id: 'G',
-    name: 'Analizar riesgos',
-    description: 'Identificación de cuellos de botella y puntos de falla.',
-    resource: 'Analista de riesgos',
-    cost: 145000,
-    t: 5,
-    H: 2,
-    IP: 8,
-    TP: 13,
-    IL: 10,
-    TL: 15,
-    position: { x: 520, y: 300 },
-  },
-  {
-    id: 'H',
-    name: 'Levantar costos',
-    description: 'Estimación preliminar de recursos y costos operativos.',
-    resource: 'Controller financiero',
-    cost: 110000,
-    t: 4,
-    H: 5,
-    IP: 9,
-    TP: 13,
-    IL: 14,
-    TL: 18,
-    position: { x: 520, y: 440 },
-  },
-  {
-    id: 'I',
-    name: 'Consolidar hallazgos',
-    description: 'Resumen ejecutivo de observaciones y oportunidades.',
-    resource: 'Analista senior',
-    cost: 98000,
-    t: 3,
-    H: 2,
-    IP: 14,
-    TP: 17,
-    IL: 16,
-    TL: 19,
-    position: { x: 790, y: 40 },
-  },
-  {
-    id: 'J',
-    name: 'Construir modelo PERT',
-    description: 'Estructuración formal de la red de actividades del proyecto.',
-    resource: 'Planner CPM',
-    cost: 230000,
-    t: 7,
-    H: 0,
-    IP: 14,
-    TP: 21,
-    IL: 14,
-    TL: 21,
-    position: { x: 790, y: 180 },
-  },
-  {
-    id: 'K',
-    name: 'Validar recursos',
-    description: 'Cruce de cargas, disponibilidad y restricciones de equipo.',
-    resource: 'Coordinador operativo',
-    cost: 125000,
-    t: 4,
-    H: 3,
-    IP: 13,
-    TP: 17,
-    IL: 16,
-    TL: 20,
-    position: { x: 790, y: 320 },
-  },
-  {
-    id: 'L',
-    name: 'Preparar informe parcial',
-    description: 'Documento intermedio para revisión con el docente.',
-    resource: 'Redactor técnico',
-    cost: 105000,
-    t: 5,
-    H: 6,
-    IP: 13,
-    TP: 18,
-    IL: 19,
-    TL: 24,
-    position: { x: 790, y: 460 },
-  },
-  {
-    id: 'M',
-    name: 'Simular ejecución',
-    description: 'Prueba del comportamiento temporal y dependencias del plan.',
-    resource: 'Ingeniero de simulación',
-    cost: 240000,
-    t: 6,
-    H: 0,
-    IP: 21,
-    TP: 27,
-    IL: 21,
-    TL: 27,
-    position: { x: 1060, y: 120 },
-  },
-  {
-    id: 'N',
-    name: 'Optimizar buffers',
-    description: 'Ajuste de holguras y ventanas de ejecución secundarias.',
-    resource: 'Analista de optimización',
-    cost: 135000,
-    t: 5,
-    H: 2,
-    IP: 21,
-    TP: 26,
-    IL: 23,
-    TL: 28,
-    position: { x: 1060, y: 260 },
-  },
-  {
-    id: 'O',
-    name: 'Cruzar escenarios',
-    description: 'Comparación de alternativas y sensibilidad de resultados.',
-    resource: 'Modelador de escenarios',
-    cost: 140000,
-    t: 4,
-    H: 4,
-    IP: 18,
-    TP: 22,
-    IL: 22,
-    TL: 26,
-    position: { x: 1060, y: 400 },
-  },
-  {
-    id: 'P',
-    name: 'Preparar narrativa',
-    description: 'Construcción del discurso para sustentar la solución.',
-    resource: 'Storyteller de datos',
-    cost: 85000,
-    t: 3,
-    H: 3,
-    IP: 27,
-    TP: 30,
-    IL: 30,
-    TL: 33,
-    position: { x: 1330, y: 20 },
-  },
-  {
-    id: 'Q',
-    name: 'Consolidar ruta crítica',
-    description: 'Identificación de actividades que no admiten retraso.',
-    resource: 'Especialista PERT',
-    cost: 160000,
-    t: 4,
-    H: 0,
-    IP: 27,
-    TP: 31,
-    IL: 27,
-    TL: 31,
-    position: { x: 1330, y: 180 },
-  },
-  {
-    id: 'R',
-    name: 'Revisar variantes',
-    description: 'Análisis de caminos alternos y retrasos tolerables.',
-    resource: 'Consultor de mejora',
-    cost: 115000,
-    t: 5,
-    H: 2,
-    IP: 26,
-    TP: 31,
-    IL: 28,
-    TL: 33,
-    position: { x: 1330, y: 340 },
-  },
-  {
-    id: 'S',
-    name: 'Ensayar presentación',
-    description: 'Pruebas del relato y tiempos de exposición del equipo.',
-    resource: 'Equipo expositor',
-    cost: 70000,
-    t: 3,
-    H: 5,
-    IP: 22,
-    TP: 25,
-    IL: 27,
-    TL: 30,
-    position: { x: 1330, y: 500 },
-  },
-  {
-    id: 'T',
-    name: 'Entrega final',
-    description: 'Cierre del proyecto y exposición final del trabajo universitario.',
-    resource: 'Equipo completo',
-    cost: 150000,
-    t: 6,
-    H: 0,
-    IP: 31,
-    TP: 37,
-    IL: 31,
-    TL: 37,
-    position: { x: 1600, y: 220 },
-  },
-]
+export type TransportSource = {
+  id: string
+  name: string
+  offer: number
+}
 
-export const pertLinks: PertLink[] = [
-  { id: 'A-B', source: 'A', target: 'B' },
-  { id: 'A-C', source: 'A', target: 'C' },
-  { id: 'A-D', source: 'A', target: 'D' },
-  { id: 'B-E', source: 'B', target: 'E' },
-  { id: 'B-F', source: 'B', target: 'F' },
-  { id: 'C-F', source: 'C', target: 'F' },
-  { id: 'C-G', source: 'C', target: 'G' },
-  { id: 'D-G', source: 'D', target: 'G' },
-  { id: 'D-H', source: 'D', target: 'H' },
-  { id: 'E-I', source: 'E', target: 'I' },
-  { id: 'F-I', source: 'F', target: 'I' },
-  { id: 'F-J', source: 'F', target: 'J' },
-  { id: 'G-J', source: 'G', target: 'J' },
-  { id: 'G-K', source: 'G', target: 'K' },
-  { id: 'H-K', source: 'H', target: 'K' },
-  { id: 'H-L', source: 'H', target: 'L' },
-  { id: 'I-M', source: 'I', target: 'M' },
-  { id: 'J-M', source: 'J', target: 'M' },
-  { id: 'J-N', source: 'J', target: 'N' },
-  { id: 'K-N', source: 'K', target: 'N' },
-  { id: 'K-O', source: 'K', target: 'O' },
-  { id: 'L-O', source: 'L', target: 'O' },
-  { id: 'M-P', source: 'M', target: 'P' },
-  { id: 'M-Q', source: 'M', target: 'Q' },
-  { id: 'N-Q', source: 'N', target: 'Q' },
-  { id: 'N-R', source: 'N', target: 'R' },
-  { id: 'O-R', source: 'O', target: 'R' },
-  { id: 'O-S', source: 'O', target: 'S' },
-  { id: 'P-T', source: 'P', target: 'T' },
-  { id: 'Q-T', source: 'Q', target: 'T' },
-  { id: 'R-T', source: 'R', target: 'T' },
-  { id: 'S-T', source: 'S', target: 'T' },
-]
+export type TransportDestination = {
+  id: string
+  name: string
+  demand: number
+}
+
+export const pertRouteCritical = data.pertCpm.rutaCritica
+
+export const pertNodesAll = data.pertCpm.nodos
+
+export const pertTasks: PertTask[] = data.pertCpm.nodos
+  .filter((node) => node.id !== 'Inicio' && node.id !== 'Fin')
+  .map((node) => ({
+    id: node.id,
+    name: node.actividad.split(':')[0] ?? node.actividad,
+    description: node.actividad,
+    resource: node.recurso,
+    cost: node.costoCOP,
+    t: node.duracionDias,
+    H: node.H,
+    IP: node.IP,
+    TP: node.TP,
+    IL: node.IL,
+    TL: node.TL,
+    predecesoras: node.predecesoras,
+    esCritica: node.esCritica,
+    position: node.position,
+  }))
+
+export const pertLinks: PertLink[] = data.pertCpm.aristas
+  .filter((edge) => edge.from !== 'Inicio' && edge.to !== 'Fin')
+  .map((edge) => ({
+    id: `${edge.from}-${edge.to}`,
+    source: edge.from,
+    target: edge.to,
+  }))
+
+export const pertLinksAll: PertLink[] = data.pertCpm.aristas.map((edge) => ({
+  id: `${edge.from}-${edge.to}`,
+  source: edge.from,
+  target: edge.to,
+}))
+
+export const transportSources: TransportSource[] = data.transporte.fuentes.map(
+  (source) => ({
+    id: source.id,
+    name: source.nombre,
+    offer: source.oferta,
+  }),
+)
+
+export const transportDestinations: TransportDestination[] =
+  data.transporte.destinos.map((destination) => ({
+    id: destination.id,
+    name: destination.nombre,
+    demand: destination.demanda,
+  }))
+
+export const transportCostMatrix: number[][] = transportSources.map((source) =>
+  transportDestinations.map(
+    (destination) => data.transporte.costos[source.id][destination.id] ?? 0,
+  ),
+)
+
+export const transportSolverAllocation: number[][] = transportSources.map(
+  (source) =>
+    transportDestinations.map(
+      (destination) =>
+        data.transporte.soluciones.solverSimplex.asignacion[source.id][
+          destination.id
+        ] ?? 0,
+    ),
+)
+
+export const transportSolverOptimalCost =
+  data.transporte.soluciones.solverSimplex.costoTotal
