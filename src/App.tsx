@@ -228,6 +228,7 @@ function App() {
 function HomeView() {
   const [selectedBlockTitle, setSelectedBlockTitle] = useState<string | null>(null)
   const [isPertMatrixOpen, setIsPertMatrixOpen] = useState(false)
+  const [isSectionsRoadmapOpen, setIsSectionsRoadmapOpen] = useState(false)
 
   const selectedBlock =
     ecosystemBlocks.find((block) => block.title === selectedBlockTitle) ?? null
@@ -252,6 +253,13 @@ function HomeView() {
               className="inline-flex items-center gap-2 rounded-xl border border-cyan-300/30 bg-cyan-400/10 px-4 py-2 text-xs font-semibold uppercase tracking-[0.18em] text-cyan-100 transition hover:border-cyan-200/50 hover:bg-cyan-300/15"
             >
               Ver matriz PERT-CPM
+            </button>
+            <button
+              type="button"
+              onClick={() => setIsSectionsRoadmapOpen(true)}
+              className="inline-flex items-center gap-2 rounded-xl border border-emerald-300/30 bg-emerald-400/10 px-4 py-2 text-xs font-semibold uppercase tracking-[0.18em] text-emerald-100 transition hover:border-emerald-200/50 hover:bg-emerald-300/15"
+            >
+              Ver secciones 2, 3 y 4
             </button>
             <span className="text-xs text-cyan-100/80">
               {pertActivities.length} actividades definidas para 1.1, 1.2 y 1.3
@@ -428,6 +436,76 @@ function HomeView() {
                   ))}
                 </tbody>
               </table>
+            </div>
+          </article>
+        </div>
+      ) : null}
+
+      {isSectionsRoadmapOpen ? (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 p-4 backdrop-blur-sm"
+          role="presentation"
+          onClick={() => setIsSectionsRoadmapOpen(false)}
+        >
+          <article
+            className="max-h-[88vh] w-full max-w-5xl overflow-auto rounded-3xl border border-white/15 bg-slate-950 p-5 shadow-[0_30px_80px_rgba(2,6,23,0.7)]"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Hoja de ruta de secciones 2, 3 y 4"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="mb-4 flex items-center justify-between gap-3">
+              <div>
+                <p className="text-xs uppercase tracking-[0.32em] text-emerald-200/80">
+                  Hoja de ruta de sustentación
+                </p>
+                <h3 className="mt-2 text-xl font-semibold text-white md:text-2xl">
+                  Continuidad de secciones del documento maestro
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsSectionsRoadmapOpen(false)}
+                className="rounded-xl border border-white/15 bg-white/[0.03] px-3 py-1 text-xs uppercase tracking-[0.2em] text-slate-200 transition hover:border-white/30"
+              >
+                Cerrar
+              </button>
+            </div>
+
+            <div className="grid gap-4 md:grid-cols-3">
+              <article className="rounded-2xl border border-cyan-400/20 bg-cyan-400/10 p-4">
+                <p className="text-[11px] uppercase tracking-[0.24em] text-cyan-200/90">Sección 2</p>
+                <h4 className="mt-2 text-lg font-semibold text-white">Juego PERT-CPM</h4>
+                <ul className="mt-3 space-y-1.5 text-sm leading-6 text-slate-200">
+                  <li>Red completa con nodos Inicio y Fin.</li>
+                  <li>Selección de caminos con resaltado contextual.</li>
+                  <li>Sistema de puntaje y revelado de ruta crítica.</li>
+                </ul>
+              </article>
+
+              <article className="rounded-2xl border border-violet-400/20 bg-violet-400/10 p-4">
+                <p className="text-[11px] uppercase tracking-[0.24em] text-violet-200/90">Sección 3</p>
+                <h4 className="mt-2 text-lg font-semibold text-white">Cronograma Gantt</h4>
+                <ul className="mt-3 space-y-1.5 text-sm leading-6 text-slate-200">
+                  <li>Línea de tiempo con tareas, costo y recurso.</li>
+                  <li>Slider de día actual para tareas activas.</li>
+                  <li>Tooltips con detalle técnico y predecesoras.</li>
+                </ul>
+              </article>
+
+              <article className="rounded-2xl border border-amber-400/20 bg-amber-400/10 p-4">
+                <p className="text-[11px] uppercase tracking-[0.24em] text-amber-200/90">Sección 4</p>
+                <h4 className="mt-2 text-lg font-semibold text-white">Modelo de Transporte</h4>
+                <ul className="mt-3 space-y-1.5 text-sm leading-6 text-slate-200">
+                  <li>Matriz 4x3 con validación reactiva oferta/demanda.</li>
+                  <li>Costo total dinámico en tiempo real.</li>
+                  <li>Comparación contra solución óptima del solver.</li>
+                </ul>
+              </article>
+            </div>
+
+            <div className="mt-4 rounded-2xl border border-emerald-300/20 bg-emerald-400/10 p-4 text-sm leading-7 text-emerald-50">
+              Este panel permite sustentar rápidamente el avance por secciones del documento maestro sin modificar el comportamiento operativo de los módulos.
             </div>
           </article>
         </div>

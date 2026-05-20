@@ -6,12 +6,22 @@ type FilterMode = 'all' | 'critical' | 'active-day'
 
 const MAX_DAY = 46
 const DAY_WIDTH = 34
+const ROW_HEIGHT = 72
+const TOOLTIP_WIDTH = 320
+const TIMELINE_WIDTH = MAX_DAY * DAY_WIDTH + 40
+
+type HoveredTooltip = {
+  taskId: string
+  x: number
+  y: number
+}
 
 export function GanttView() {
   const [filterMode, setFilterMode] = useState<FilterMode>('all')
   const [currentDay, setCurrentDay] = useState(18)
-  const [hoveredTaskId, setHoveredTaskId] = useState<string | null>(null)
+  const [hoveredTooltip, setHoveredTooltip] = useState<HoveredTooltip | null>(null)
   const [focusedTaskId, setFocusedTaskId] = useState<string | null>(null)
+  const [isPresentationMode, setIsPresentationMode] = useState(false)
 
   const predecessorMap = useMemo(() => {
     const map = new Map<string, string[]>()
@@ -66,8 +76,17 @@ export function GanttView() {
     }
   }, [currentDay, filterMode])
 
-  const tooltipTask =
-    pertTasks.find((task) => task.id === hoveredTaskId) ?? null
+  const taskById = useMemo(
+    () => new Map(pertTasks.map((task) => [task.id, task] as const)),
+    [],
+  )
+
+  const tooltipTask = hoveredTooltip ? taskById.get(hoveredTooltip.taskId) ?? null : null
+  const leftPanelWidth = isPresentationMode ? 360 : 460
+  const ganttMinWidth = isPresentationMode ? 1660 : 1760
+  const leftGridTemplate = isPresentationMode
+    ? '56px minmax(240px, 1fr)'
+    : '56px minmax(220px, 1fr) 130px'
 
   return (
     <section className="rounded-[26px] border border-white/10 bg-slate-950/65 p-5 md:p-6">
@@ -114,6 +133,18 @@ export function GanttView() {
               isActive={filterMode === 'active-day'}
               onClick={() => setFilterMode('active-day')}
             />
+            <button
+              type="button"
+              onClick={() => setIsPresentationMode((currentValue) => !currentValue)}
+              className={`inline-flex items-center gap-2 rounded-2xl border px-4 py-3 text-sm font-semibold transition ${
+                isPresentationMode
+                  ? 'border-cyan-400/35 bg-cyan-400/12 text-white'
+                  : 'border-white/10 bg-white/[0.03] text-slate-300 hover:border-white/20 hover:bg-white/[0.05]'
+              }`}
+            >
+              <Activity className="h-4 w-4" />
+              {isPresentationMode ? 'Modo normal' : 'Modo presentación'}
+            </button>
           </div>
 
           <div className="rounded-2xl border border-cyan-400/12 bg-cyan-400/8 p-4">
@@ -150,13 +181,12 @@ export function GanttView() {
 
         <div className="relative mt-6 overflow-hidden rounded-[22px] border border-white/10 bg-slate-950/80">
           <div className="overflow-auto">
-            <div className="flex min-w-[1780px]">
-              <div className="sticky left-0 z-20 w-[420px] shrink-0 border-r border-white/10 bg-slate-950/95 backdrop-blur">
-                <div className="grid h-14 grid-cols-[70px_1.6fr_120px_130px] items-center border-b border-white/10 bg-slate-900/95 px-4 text-[11px] font-semibold uppercase tracking-[0.25em] text-slate-400">
+            <div className="flex" style={{ minWidth: ganttMinWidth }}>
+              <div className="sticky left-0 z-20 shrink-0 border-r border-white/10 bg-slate-950/95 backdrop-blur" style={{ width: leftPanelWidth }}>
+                <div className="grid h-14 items-center gap-3 border-b border-white/10 bg-slate-900/95 px-4 text-[11px] font-semibold uppercase tracking-[0.25em] text-slate-400" style={{ gridTemplateColumns: leftGridTemplate }}>
                   <span>ID</span>
                   <span>Nombre</span>
-                  <span>Costo</span>
-                  <span>Recurso</span>
+                  {!isPresentationMode ? <span>Costo</span> : null}
                 </div>
 
                 {filteredTasks.map((task) => {
@@ -173,24 +203,28 @@ export function GanttView() {
                           currentValue === task.id ? null : task.id,
                         )
                       }
-                      className={`grid h-[68px] w-full grid-cols-[70px_1.6fr_120px_130px] items-center border-b border-white/6 px-4 text-left transition ${
+                      className={`grid w-full items-center gap-3 border-b border-white/6 px-4 text-left transition ${
                         task.H === 0
                           ? 'bg-red-500/[0.07]'
                           : 'bg-slate-950/0'
                       } ${isDimmed ? 'opacity-25' : 'opacity-100'} ${
                         isFocused ? 'ring-1 ring-inset ring-cyan-400/35' : ''
                       } ${isActiveOnDay ? 'shadow-[inset_0_0_0_1px_rgba(34,197,94,0.2)]' : ''}`}
+                      style={{ minHeight: ROW_HEIGHT, gridTemplateColumns: leftGridTemplate }}
                     >
                       <span className="text-lg font-semibold text-white">{task.id}</span>
-                      <span className="pr-3 text-sm leading-6 text-slate-200">{task.name}</span>
-                      <span className="text-sm text-slate-300">{formatCurrency(task.cost)}</span>
-                      <span className="text-xs leading-5 text-slate-400">{task.resource}</span>
+                      <span className="pr-3 text-sm leading-5 text-slate-200" title={task.name}>
+                        {task.name}
+                      </span>
+                      {!isPresentationMode ? (
+                        <span className="text-sm text-slate-300">{formatCurrency(task.cost)}</span>
+                      ) : null}
                     </button>
                   )
                 })}
               </div>
 
-              <div className="relative flex-1" style={{ width: MAX_DAY * DAY_WIDTH + 40 }}>
+              <div className="relative flex-1" style={{ width: TIMELINE_WIDTH }}>
                 <div className="sticky top-0 z-10 flex h-14 border-b border-white/10 bg-slate-900/95 backdrop-blur">
                   {Array.from({ length: MAX_DAY }, (_, index) => index + 1).map((day) => (
                     <div
@@ -211,22 +245,53 @@ export function GanttView() {
                     style={{ left: currentDay * DAY_WIDTH }}
                   />
 
-                  {filteredTasks.map((task) => {
-                    const predecessors = predecessorMap.get(task.id) ?? []
+                  <div className="pointer-events-none absolute right-3 top-2 z-20 flex items-center gap-3 rounded-xl border border-white/10 bg-slate-950/85 px-3 py-1.5 text-[10px] uppercase tracking-[0.16em] text-slate-300">
+                    <span className="inline-flex items-center gap-1.5">
+                      <span className="h-2.5 w-2.5 rounded-full bg-[#ff4a4a]" />
+                      Crítica
+                    </span>
+                    <span className="inline-flex items-center gap-1.5">
+                      <span className="h-2.5 w-2.5 rounded-full bg-[#3aa8ff]" />
+                      No crítica
+                    </span>
+                    <span className="inline-flex items-center gap-1.5">
+                      <span className="h-2.5 w-2.5 rounded-full bg-emerald-300" />
+                      Día actual
+                    </span>
+                  </div>
+
+                  {filteredTasks.map((task, rowIndex) => {
                     const isFocused = focusedChain.has(task.id)
                     const isDimmed = focusedTaskId !== null && !isFocused
                     const isActiveOnDay = currentDay > task.IP && currentDay <= task.TP
                     const barWidth = Math.max((task.TP - task.IP) * DAY_WIDTH, 18)
                     const barLeft = task.IP * DAY_WIDTH
+                    const preferredRight = barLeft + barWidth + 12
+                    const shouldRenderLeft = preferredRight + TOOLTIP_WIDTH > TIMELINE_WIDTH
+                    const tooltipX = shouldRenderLeft
+                      ? Math.max(8, barLeft - TOOLTIP_WIDTH - 12)
+                      : preferredRight
+                    const tooltipY = rowIndex * ROW_HEIGHT + 6
 
                     return (
                       <div
                         key={`timeline-${task.id}`}
-                        className={`relative h-[68px] border-b border-white/6 ${
+                        className={`relative border-b border-white/6 ${
                           isDimmed ? 'opacity-15' : 'opacity-100'
                         }`}
-                        onMouseEnter={() => setHoveredTaskId(task.id)}
-                        onMouseLeave={() => setHoveredTaskId((currentValue) => (currentValue === task.id ? null : currentValue))}
+                        style={{ height: ROW_HEIGHT }}
+                        onMouseEnter={() =>
+                          setHoveredTooltip({
+                            taskId: task.id,
+                            x: tooltipX,
+                            y: tooltipY,
+                          })
+                        }
+                        onMouseLeave={() =>
+                          setHoveredTooltip((currentValue) =>
+                            currentValue?.taskId === task.id ? null : currentValue,
+                          )
+                        }
                       >
                         <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(148,163,184,0.08)_1px,transparent_1px)] bg-[size:34px_100%]" />
 
@@ -245,51 +310,45 @@ export function GanttView() {
                             isActiveOnDay ? 'scale-[1.02] shadow-[0_0_0_2px_rgba(34,197,94,0.28),0_12px_30px_rgba(34,197,94,0.24)]' : ''
                           }`}
                           style={{ left: barLeft + 4, width: barWidth - 8 }}
+                          title={`${task.id} · ${task.name}`}
                         >
-                          <span className="truncate text-sm font-semibold tracking-[0.04em]">
-                            {task.id} · {task.name}
+                          <span className="truncate text-sm font-semibold tracking-[0.08em]">
+                            {task.id}
                           </span>
                         </button>
-
-                        <div className="pointer-events-none absolute left-2 top-2 text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-500">
-                          IP {task.IP}
-                        </div>
-                        <div className="pointer-events-none absolute right-2 top-2 text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-500">
-                          TP {task.TP}
-                        </div>
-                        <div className="pointer-events-none absolute bottom-2 left-3 text-[10px] uppercase tracking-[0.18em] text-slate-500">
-                          Predecesoras: {predecessors.length > 0 ? predecessors.join(', ') : 'Ninguna'}
-                        </div>
                       </div>
                     )
                   })}
+
+                  {tooltipTask && hoveredTooltip ? (
+                    <div
+                      className="pointer-events-none absolute z-30 w-80 rounded-3xl border border-white/10 bg-slate-950/95 p-4 shadow-[0_22px_60px_rgba(2,6,23,0.55)] backdrop-blur"
+                      style={{ left: hoveredTooltip.x, top: hoveredTooltip.y, width: TOOLTIP_WIDTH }}
+                    >
+                      <p className="text-xs uppercase tracking-[0.3em] text-slate-500">
+                        Tooltip de tarea
+                      </p>
+                      <h3 className="mt-3 text-lg font-semibold text-white">
+                        {tooltipTask.id} · {tooltipTask.name}
+                      </h3>
+                      <p className="mt-3 text-sm leading-7 text-slate-300">
+                        {tooltipTask.description}
+                      </p>
+                      <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
+                        <TooltipMetric label="Duración exacta" value={`${tooltipTask.t} días`} />
+                        <TooltipMetric label="Holgura" value={`${tooltipTask.H} días`} />
+                        <TooltipMetric
+                          label="Predecesoras"
+                          value={(predecessorMap.get(tooltipTask.id) ?? []).join(', ') || 'Ninguna'}
+                        />
+                        <TooltipMetric label="Recurso" value={tooltipTask.resource} />
+                      </div>
+                    </div>
+                  ) : null}
                 </div>
               </div>
             </div>
           </div>
-
-          {tooltipTask ? (
-            <div className="pointer-events-none absolute right-5 top-5 z-30 w-80 rounded-3xl border border-white/10 bg-slate-950/95 p-4 shadow-[0_22px_60px_rgba(2,6,23,0.55)] backdrop-blur">
-              <p className="text-xs uppercase tracking-[0.3em] text-slate-500">
-                Tooltip de tarea
-              </p>
-              <h3 className="mt-3 text-lg font-semibold text-white">
-                {tooltipTask.id} · {tooltipTask.name}
-              </h3>
-              <p className="mt-3 text-sm leading-7 text-slate-300">
-                {tooltipTask.description}
-              </p>
-              <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
-                <TooltipMetric label="Duración exacta" value={`${tooltipTask.t} días`} />
-                <TooltipMetric label="Holgura" value={`${tooltipTask.H} días`} />
-                <TooltipMetric
-                  label="Predecesoras"
-                  value={(predecessorMap.get(tooltipTask.id) ?? []).join(', ') || 'Ninguna'}
-                />
-                <TooltipMetric label="Recurso" value={tooltipTask.resource} />
-              </div>
-            </div>
-          ) : null}
         </div>
       </div>
     </section>
