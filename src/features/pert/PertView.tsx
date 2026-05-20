@@ -22,6 +22,13 @@ import {
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { CustomPertNode, type PertNodeData } from './CustomPertNode'
 import { pertLinksAll, pertNodesAll, pertRouteCritical } from './pertData'
+import {
+  submitGameAttempt,
+  getLeaderboard,
+  deleteAttempt,
+  deleteMultipleAttempts,
+  deleteAllAttempts,
+} from '../../lib/supabase-game'
 
 const nodeTypes = { pert: CustomPertNode }
 
@@ -120,6 +127,11 @@ export function PertView() {
   const [isGuideOpen, setIsGuideOpen] = useState(loadGuideOpen)
   const [isHelpOpen, setIsHelpOpen] = useState(false)
   const [isSubmittingAttempt, setIsSubmittingAttempt] = useState(false)
+  const [supabaseError, setSupabaseError] = useState<string | null>(null)
+  const [isAdminModalOpen, setIsAdminModalOpen] = useState(false)
+  const [adminPassword, setAdminPassword] = useState('')
+  const [selectedAttemptIds, setSelectedAttemptIds] = useState<Set<string>>(new Set())
+  const [isDeletingAttempts, setIsDeletingAttempts] = useState(false)
   const submitLockRef = useRef(false)
 
   useEffect(() => {
@@ -145,7 +157,32 @@ export function PertView() {
   useEffect(() => {
     localStorage.setItem(GUIDE_OPEN_KEY, isGuideOpen ? '1' : '0')
   }, [isGuideOpen])
-
+  // Load ranking from Supabase on mount (one-time)
+  useEffect(() => {
+    const loadRanking = async () => {
+      try {
+        setSupabaseError(null)
+        const attempts = await getLeaderboard(50)
+        const entries: ScoreEntry[] = attempts.map((a) => ({
+          id: a.id,
+          playerName: a.player_name,
+          score: a.score,
+          hits: a.hits,
+          falsePositives: a.false_positives,
+          missed: a.missed,
+          hintsUsed: a.hints_used,
+          visitedPct: a.visited_pct,
+          submittedAt: new Date(a.created_at).toLocaleString(),
+        }))
+        if (entries.length > 0) {
+          setScoreboard(entries)
+        }
+      } catch (err) {
+        console.warn('Could not load ranking from Supabase:', err)
+      }
+    }
+    loadRanking()
+  }, [])
   function revealHint(field: string) {
     if (!selectedTaskId) {
       return
@@ -169,9 +206,90 @@ export function PertView() {
     localStorage.removeItem(GUESSES_KEY)
   }
 
-  function clearScoreboard() {
-    setScoreboard([])
-    localStorage.removeItem(SCOREBOARD_KEY)
+  function openAdminModal() {
+    setIsAdminModalOpen(true)
+    setAdminPassword('')
+    setSelectedAttemptIds(new Set())
+  }
+
+  function closeAdminModal() {
+    setIsAdminModalOpen(false)
+    setAdminPassword('')
+    setSelectedAttemptIds(new Set())
+  }
+
+  function toggleAttemptSelection(attemptId: string) {
+    const updated = new Set(selectedAttemptIds)
+    if (updated.has(attemptId)) {
+      updated.delete(attemptId)
+    } else {
+      updated.add(attemptId)
+    }
+    setSelectedAttemptIds(updated)
+  }
+
+  async function handleDeleteAttempts() {
+    if (!adminPassword) {
+      alert('Ingresa la contraseña admin')
+      return
+    }
+
+    const idsToDelete = Array.from(selectedAttemptIds)
+    if (idsToDelete.length === 0) {
+      alert('Selecciona al menos un intento para eliminar')
+      return
+    }
+
+    setIsDeletingAttempts(true)
+
+    try {
+      if (idsToDelete.length === 1) {
+        await deleteAttempt(idsToDelete[0], adminPassword)
+      } else {
+        await deleteMultipleAttempts(idsToDelete, adminPassword)
+      }
+
+      // Remove from local scoreboard
+      setScoreboard((prev) => prev.filter((entry) => !selectedAttemptIds.has(entry.id)))
+      setSupabaseError(null)
+      closeAdminModal()
+      alert(`${idsToDelete.length} intento(s) eliminado(s) correctamente`)
+    } catch (err) {
+      const errorMsg = err instanceof Error ? err.message : 'Failed to delete attempts'
+      setSupabaseError(errorMsg)
+      alert(`Error: ${errorMsg}`)
+    } finally {
+      setIsDeletingAttempts(false)
+    }
+  }
+
+  async function handleDeleteAllAttempts() {
+    if (!adminPassword) {
+      alert('Ingresa la contraseña admin')
+      return
+    }
+
+    const confirmed = window.confirm(
+      '¿Estás seguro de que deseas eliminar TODOS los intentos? Esta acción no se puede deshacer.',
+    )
+    if (!confirmed) return
+
+    setIsDeletingAttempts(true)
+
+    try {
+      await deleteAllAttempts(adminPassword)
+      setScoreboard([])
+      localStorage.removeItem(SCOREBOARD_KEY)
+      setSupabaseError(null)
+      closeAdminModal()
+      alert('Todos los intentos han sido eliminados')
+    } catch (err) {
+      const errorMsg = err instanceof Error ? err.message : 'Failed to delete all attempts'
+      setSupabaseError(errorMsg)
+      alert(`Error: ${errorMsg}`)
+    } finally {
+      setIsDeletingAttempts(false)
+    }
   }
 
   function startPlayer() {
@@ -454,35 +572,55 @@ export function PertView() {
     submitLockRef.current = true
     setIsSubmittingAttempt(true)
 
-    const newEntry: ScoreEntry = {
-      id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-      playerName: currentPlayer,
-      score: currentScore,
-      hits,
-      falsePositives,
-      missed,
-      hintsUsed,
-      visitedPct: progressPct,
-      submittedAt: new Date().toLocaleString(),
+    const submitToSupabase = async () => {
+      try {
+        setSupabaseError(null)
+        const attempt = await submitGameAttempt(
+          null, // no session tracking needed
+          currentPlayer,
+          currentScore,
+          hits,
+          falsePositives,
+          missed,
+          hintsUsed,
+          progressPct,
+          criticalGuesses,
+        )
+
+        const newEntry: ScoreEntry = {
+          id: attempt.id,
+          playerName: attempt.player_name,
+          score: attempt.score,
+          hits: attempt.hits,
+          falsePositives: attempt.false_positives,
+          missed: attempt.missed,
+          hintsUsed: attempt.hints_used,
+          visitedPct: attempt.visited_pct,
+          submittedAt: new Date(attempt.created_at).toLocaleString(),
+        }
+
+        // Add to local scoreboard (doesn't affect other browsers)
+        setScoreboard((prev) =>
+          [...prev, newEntry].sort((a, b) => {
+            if (b.score !== a.score) return b.score - a.score
+            if (a.hintsUsed !== b.hintsUsed) return a.hintsUsed - b.hintsUsed
+            return b.hits - a.hits
+          }),
+        )
+        setLastResult(newEntry)
+      } catch (err) {
+        const errorMsg = err instanceof Error ? err.message : 'Failed to submit attempt'
+        setSupabaseError(errorMsg)
+        console.error('Submit attempt failed:', err)
+      } finally {
+        window.setTimeout(() => {
+          submitLockRef.current = false
+          setIsSubmittingAttempt(false)
+        }, 500)
+      }
     }
 
-    setScoreboard((prev) =>
-      [...prev, newEntry].sort((a, b) => {
-        if (b.score !== a.score) {
-          return b.score - a.score
-        }
-        if (a.hintsUsed !== b.hintsUsed) {
-          return a.hintsUsed - b.hintsUsed
-        }
-        return b.hits - a.hits
-      }),
-    )
-    setLastResult(newEntry)
-
-    window.setTimeout(() => {
-      submitLockRef.current = false
-      setIsSubmittingAttempt(false)
-    }, 500)
+    submitToSupabase()
   }
 
   const handleNodeClick: NodeMouseHandler = (_, node) => {
@@ -742,6 +880,12 @@ export function PertView() {
               Ultimo envio: {lastResult.playerName} obtuvo {lastResult.score} puntos.
             </p>
           )}
+
+          {supabaseError && (
+            <p className="mt-2 text-xs text-red-300">
+              ⚠ Error: {supabaseError}
+            </p>
+          )}
         </div>
 
         <div className="rounded-3xl border border-white/10 bg-slate-950/70 p-4 text-sm leading-6 text-slate-300">
@@ -765,10 +909,11 @@ export function PertView() {
             <p className="text-xs uppercase tracking-[0.34em] text-slate-400">Ranking</p>
             <button
               type="button"
-              onClick={clearScoreboard}
+              onClick={openAdminModal}
               className="text-[11px] text-slate-400 transition hover:text-white"
+              title="Administrador: gestionar intentos"
             >
-              Limpiar
+              Admin
             </button>
           </div>
 
@@ -850,6 +995,98 @@ export function PertView() {
               </div>
 
               <p className="text-xs text-slate-400">Tip: usar Mostrar ruta critica ayuda a estudiar, pero te quita el bono de +10 en la ronda activa.</p>
+            </div>
+          </article>
+        </div>
+      )}
+
+      {isAdminModalOpen && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 p-4 backdrop-blur-sm"
+          role="presentation"
+          onClick={closeAdminModal}
+        >
+          <article
+            className="w-full max-w-2xl rounded-3xl border border-white/15 bg-slate-950 p-5 shadow-[0_30px_80px_rgba(2,6,23,0.72)] md:p-6"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Panel de administración"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <p className="text-xs uppercase tracking-[0.32em] text-cyan-200/80">Administración</p>
+                <h3 className="mt-2 text-xl font-semibold text-white">Gestionar intentos</h3>
+              </div>
+              <button
+                type="button"
+                onClick={closeAdminModal}
+                className="text-slate-400 transition hover:text-white"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="mt-4 space-y-4">
+              <div>
+                <label className="block text-sm font-semibold text-slate-300">Contraseña admin:</label>
+                <input
+                  type="password"
+                  value={adminPassword}
+                  onChange={(e) => setAdminPassword(e.target.value)}
+                  placeholder="Ingresa la contraseña"
+                  className="mt-2 w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-white placeholder:text-slate-500 focus:border-cyan-400/50 focus:outline-none"
+                />
+              </div>
+
+              {scoreboard.length > 0 && (
+                <div>
+                  <p className="text-sm font-semibold text-slate-300 mb-2">Selecciona intentos a eliminar:</p>
+                  <div className="max-h-64 space-y-2 overflow-y-auto">
+                    {scoreboard.map((entry) => (
+                      <label key={entry.id} className="flex items-center gap-3 rounded-lg border border-white/10 bg-white/5 p-3 cursor-pointer hover:bg-white/10">
+                        <input
+                          type="checkbox"
+                          checked={selectedAttemptIds.has(entry.id)}
+                          onChange={() => toggleAttemptSelection(entry.id)}
+                          className="rounded border-white/20"
+                        />
+                        <div className="flex-1">
+                          <p className="text-xs font-semibold text-white">{entry.playerName} · {entry.score} pts</p>
+                          <p className="text-[11px] text-slate-400">{entry.submittedAt}</p>
+                        </div>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              <div className="mt-6 flex gap-3">
+                <button
+                  type="button"
+                  onClick={handleDeleteAttempts}
+                  disabled={isDeletingAttempts || selectedAttemptIds.size === 0}
+                  className="flex-1 rounded-lg bg-red-600/20 px-4 py-2 text-sm font-semibold text-red-200 transition hover:bg-red-600/30 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {isDeletingAttempts ? 'Eliminando...' : `Eliminar seleccionados (${selectedAttemptIds.size})`}
+                </button>
+                <button
+                  type="button"
+                  onClick={handleDeleteAllAttempts}
+                  disabled={isDeletingAttempts || scoreboard.length === 0}
+                  className="flex-1 rounded-lg bg-red-900/20 px-4 py-2 text-sm font-semibold text-red-300 transition hover:bg-red-900/30 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {isDeletingAttempts ? 'Eliminando...' : 'Eliminar TODO'}
+                </button>
+                <button
+                  type="button"
+                  onClick={closeAdminModal}
+                  disabled={isDeletingAttempts}
+                  className="rounded-lg bg-slate-700/20 px-4 py-2 text-sm font-semibold text-slate-300 transition hover:bg-slate-700/30 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  Cerrar
+                </button>
+              </div>
             </div>
           </article>
         </div>
