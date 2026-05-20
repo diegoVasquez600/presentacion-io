@@ -9,6 +9,8 @@ export type PertNodeData = {
   IL: string
   TL: string
   isCritical: boolean
+  isMarkedCritical: boolean
+  isInferredCritical: boolean
   showH: boolean
   showIL: boolean
   showTL: boolean
@@ -35,9 +37,11 @@ export function CustomPertNode({
       <div
         className={`pert-node-shell ${selected ? 'is-selected' : ''} ${
           data.isCritical ? 'is-critical' : ''
-        } ${data.isPathFocused ? 'is-path-focused' : ''} ${
-          data.isDimmed ? 'is-dimmed' : ''
-        }`}
+        } ${data.isMarkedCritical ? 'is-marked-critical' : ''} ${
+          data.isInferredCritical ? 'is-inferred-critical' : ''
+        } ${
+          data.isPathFocused ? 'is-path-focused' : ''
+        } ${data.isDimmed ? 'is-dimmed' : ''}`}
       >
         <div className="absolute left-1/2 top-0 h-full w-px -translate-x-1/2 bg-slate-400/80" />
         <div className="absolute left-0 top-1/2 h-px w-full -translate-y-1/2 bg-slate-400/80" />
@@ -69,7 +73,6 @@ export function CustomPertNode({
           {data.id}
         </div>
       </div>
-
       <Handle type="source" position={Position.Right} style={hiddenHandleStyle} />
     </>
   )
