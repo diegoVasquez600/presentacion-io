@@ -1,10 +1,14 @@
 import { useState } from 'react'
 import {
+  AlertTriangle,
+  ArrowRight,
   BrainCircuit,
   CalendarRange,
-  ChevronDown,
-  ChevronUp,
   ChartNoAxesGantt,
+  CheckCircle2,
+  ChevronDown,
+  ChevronRight,
+  ChevronUp,
   CloudSun,
   CirclePlay,
   Gauge,
@@ -17,6 +21,7 @@ import { DroneOptimizationView } from './features/drone/DroneOptimizationView'
 import { GanttView } from './features/gantt/GanttView'
 import { PertView } from './features/pert/PertView'
 import { pertNodesAll } from './features/pert/pertData'
+import presentationVideo from './assets/presentation_io.mp4'
 import './App.css'
 
 type TabId = 'inicio' | 'pert' | 'gantt' | 'dron'
@@ -93,9 +98,12 @@ const ecosystemBlocks = [
   },
 ]
 
+type ConclusionSection = 'inicio' | 'pert' | 'gantt' | 'transporte'
+
 function App() {
   const [activeTab, setActiveTab] = useState<TabId>('inicio')
   const [creditsCollapsed, setCreditsCollapsed] = useState(true)
+  const [openConclusion, setOpenConclusion] = useState<null | ConclusionSection>(null)
 
   const renderView = () => {
     switch (activeTab) {
@@ -163,14 +171,24 @@ function App() {
             </nav>
           </div>
 
-          <div className="mt-4 hidden rounded-3xl border border-cyan-400/20 bg-cyan-400/8 p-4 text-sm text-slate-300 md:mt-8 md:block">
-            <div className="mb-2 flex items-center gap-2 text-cyan-200">
-              <CalendarRange className="h-4 w-4" />
-              Modo presentación
-            </div>
-            <p className="leading-6 text-slate-300/90">
-              El módulo PERT-CPM ya usa React Flow y queda listo para reemplazar el dataset estático por tu JSON real.
-            </p>
+          <div className="mt-4 hidden flex-col gap-1.5 md:mt-8 md:flex">
+            <p className="mb-1 text-[10px] uppercase tracking-[0.3em] text-slate-500">Conclusiones</p>
+            {([
+              { id: 'inicio', label: 'Inicio · Ecosistema IoT', border: 'border-cyan-400/20', bg: 'bg-cyan-400/8', text: 'text-cyan-200/90' },
+              { id: 'pert', label: 'PERT-CPM · Ruta crítica', border: 'border-violet-400/20', bg: 'bg-violet-400/8', text: 'text-violet-200/90' },
+              { id: 'gantt', label: 'Gantt · Cronograma', border: 'border-emerald-400/20', bg: 'bg-emerald-400/8', text: 'text-emerald-200/90' },
+              { id: 'transporte', label: 'Transporte · VAM', border: 'border-amber-400/20', bg: 'bg-amber-400/8', text: 'text-amber-200/90' },
+            ] as const).map((section) => (
+              <button
+                key={section.id}
+                type="button"
+                onClick={() => setOpenConclusion(section.id)}
+                className={`flex w-full items-center justify-between gap-2 rounded-xl border ${section.border} ${section.bg} px-3 py-2 text-left text-xs font-medium transition hover:brightness-125`}
+              >
+                <span className={section.text}>{section.label}</span>
+                <ChevronRight className="h-3 w-3 shrink-0 text-slate-500" />
+              </button>
+            ))}
           </div>
         </aside>
 
@@ -221,6 +239,9 @@ function App() {
           </div>
         </main>
       </div>
+      {openConclusion ? (
+        <ConclusionModal section={openConclusion} onClose={() => setOpenConclusion(null)} />
+      ) : null}
     </div>
   )
 }
@@ -229,6 +250,7 @@ function HomeView() {
   const [selectedBlockTitle, setSelectedBlockTitle] = useState<string | null>(null)
   const [isPertMatrixOpen, setIsPertMatrixOpen] = useState(false)
   const [isSectionsRoadmapOpen, setIsSectionsRoadmapOpen] = useState(false)
+  const [isVideoOpen, setIsVideoOpen] = useState(false)
 
   const selectedBlock =
     ecosystemBlocks.find((block) => block.title === selectedBlockTitle) ?? null
@@ -260,6 +282,14 @@ function HomeView() {
               className="inline-flex items-center gap-2 rounded-xl border border-emerald-300/30 bg-emerald-400/10 px-4 py-2 text-xs font-semibold uppercase tracking-[0.18em] text-emerald-100 transition hover:border-emerald-200/50 hover:bg-emerald-300/15"
             >
               Ver secciones 2, 3 y 4
+            </button>
+            <button
+              type="button"
+              onClick={() => setIsVideoOpen(true)}
+              className="inline-flex items-center gap-2 rounded-xl border border-violet-300/30 bg-violet-400/10 px-4 py-2 text-xs font-semibold uppercase tracking-[0.18em] text-violet-100 transition hover:border-violet-200/50 hover:bg-violet-300/15"
+            >
+              <CirclePlay className="h-3.5 w-3.5" />
+              Ver video
             </button>
             <span className="text-xs text-cyan-100/80">
               {pertActivities.length} actividades definidas para 1.1, 1.2 y 1.3
@@ -520,7 +550,233 @@ function HomeView() {
           </article>
         </div>
       ) : null}
+
+        {isVideoOpen ? (
+          <div
+            className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 p-4 backdrop-blur-sm"
+            role="presentation"
+            onClick={() => setIsVideoOpen(false)}
+          >
+            <article
+              className="w-full max-w-5xl rounded-3xl border border-white/15 bg-slate-950 p-4 shadow-[0_30px_80px_rgba(2,6,23,0.8)] md:p-5"
+              role="dialog"
+              aria-modal="true"
+              aria-label="Video de presentación"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="mb-3 flex items-center justify-between gap-3">
+                <div>
+                  <p className="text-xs uppercase tracking-[0.32em] text-violet-300">Presentación del proyecto</p>
+                  <h3 className="mt-1 text-lg font-semibold text-white">Plataforma IoT Agrícola</h3>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setIsVideoOpen(false)}
+                  className="rounded-xl border border-white/15 bg-white/[0.03] px-3 py-1 text-xs uppercase tracking-[0.2em] text-slate-200 transition hover:border-white/30"
+                >
+                  Cerrar
+                </button>
+              </div>
+              <div className="overflow-hidden rounded-2xl bg-black">
+                <video
+                  src={presentationVideo}
+                  controls
+                  autoPlay
+                  className="aspect-video w-full"
+                />
+              </div>
+            </article>
+          </div>
+        ) : null}
     </section>
+  )
+}
+
+function ConclusionModal({
+  section,
+  onClose,
+}: {
+  section: ConclusionSection
+  onClose: () => void
+}) {
+  const meta: Record<ConclusionSection, { title: string; accent: string; accentBg: string; accentBorder: string }> = {
+    inicio: {
+      title: 'Ecosistema IoT · Visión general del proyecto',
+      accent: 'text-cyan-300',
+      accentBg: 'bg-cyan-400/10',
+      accentBorder: 'border-cyan-400/25',
+    },
+    pert: {
+      title: 'PERT-CPM · Red de precedencias y ruta crítica',
+      accent: 'text-violet-300',
+      accentBg: 'bg-violet-400/10',
+      accentBorder: 'border-violet-400/25',
+    },
+    gantt: {
+      title: 'Gantt · Cronograma de 46 días',
+      accent: 'text-emerald-300',
+      accentBg: 'bg-emerald-400/10',
+      accentBorder: 'border-emerald-400/25',
+    },
+    transporte: {
+      title: 'Transporte · Optimización con Vogel (VAM)',
+      accent: 'text-amber-300',
+      accentBg: 'bg-amber-400/10',
+      accentBorder: 'border-amber-400/25',
+    },
+  }
+
+  const { title, accent, accentBg, accentBorder } = meta[section]
+
+  const criticalNodes = ['Inicio', 'A', 'D', 'E', 'F', 'H', 'J', 'R', 'S', 'T', 'Fin']
+  const criticalDurationMap: Record<string, string> = {
+    A: '3d', D: '6d', E: '10d', F: '7d', H: '4d', J: '4d', R: '4d', S: '5d', T: '3d',
+  }
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 p-4 backdrop-blur-sm"
+      onClick={onClose}
+    >
+      <article
+        className="max-h-[88vh] w-full max-w-3xl overflow-auto rounded-3xl border border-white/15 bg-slate-950 p-5 shadow-[0_30px_80px_rgba(2,6,23,0.7)] md:p-6"
+        onClick={(event) => event.stopPropagation()}
+      >
+        <div className="mb-5 flex items-start justify-between gap-3">
+          <div>
+            <p className={`text-xs uppercase tracking-[0.32em] ${accent}`}>Conclusiones del módulo</p>
+            <h3 className="mt-2 text-xl font-semibold text-white md:text-2xl">{title}</h3>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="shrink-0 rounded-xl border border-white/15 bg-white/[0.03] px-3 py-1 text-xs uppercase tracking-[0.2em] text-slate-200 transition hover:border-white/30"
+          >
+            Cerrar
+          </button>
+        </div>
+
+        {section === 'inicio' && (
+          <div className="space-y-3">
+            {[
+              'El proyecto integra 4 subsistemas open source: red LoRaWAN, UAS multiespectral, ERP Odoo autoalojado e IA predictiva. Su arquitectura descentralizada garantiza soberanía del dato en zonas rurales.',
+              '20 actividades modeladas en la EDT con 46 días de duración total y un presupuesto de $11,350,000 COP. La actividad E (Adquisición de hardware, $3,500,000) concentra el 30.8 % del costo total del proyecto.',
+              'La ruta crítica es única: A → D → E → F → H → J → R → S → T (9 actividades, H = 0 en todos sus nodos). Las actividades C (H = 1 día) y G (H = 2 días) forman rutas cuasi-críticas que requieren supervisión prioritaria.',
+            ].map((text, index) => (
+              <div key={index} className={`flex gap-3 rounded-2xl border ${accentBorder} ${accentBg} p-4`}>
+                <CheckCircle2 className={`mt-0.5 h-4 w-4 shrink-0 ${accent}`} />
+                <p className="text-sm leading-7 text-slate-100">{text}</p>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {section === 'pert' && (
+          <div className="space-y-3">
+            <div className={`rounded-2xl border ${accentBorder} ${accentBg} p-4`}>
+              <p className={`mb-3 text-xs uppercase tracking-[0.24em] ${accent}`}>
+                Ruta crítica · H = 0 en todos sus nodos · 46 días
+              </p>
+              <div className="flex flex-wrap items-center gap-1.5">
+                {criticalNodes.map((node, index) => [
+                  <span
+                    key={`node-${node}`}
+                    className="rounded-lg border border-violet-400/40 bg-violet-500/20 px-2.5 py-1 text-xs font-semibold text-violet-100"
+                  >
+                    {node}
+                  </span>,
+                  index < criticalNodes.length - 1 ? (
+                    <ArrowRight key={`arrow-${index}`} className="h-3 w-3 shrink-0 text-slate-500" />
+                  ) : null,
+                ])}
+              </div>
+              <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-[10px] text-slate-400">
+                {Object.entries(criticalDurationMap).map(([id, dur]) => (
+                  <span key={id}>
+                    <span className="text-slate-200">{id}</span>: {dur}
+                  </span>
+                ))}
+              </div>
+            </div>
+            {[
+              { Icon: CheckCircle2, color: accent, text: 'La ruta crítica es única. Todos los demás caminos tienen H > 0, confirmando que no existen rutas críticas alternativas en esta red.' },
+              { Icon: AlertTriangle, color: 'text-amber-300', text: 'Ruta cuasi-crítica 1 · vía C (H = 1 día): A → C → E → … Un retraso de 1 día en C (Diseño esquemático PCB) convierte este camino en ruta crítica.' },
+              { Icon: AlertTriangle, color: 'text-amber-300', text: 'Ruta cuasi-crítica 2 · vía G (H = 2 días): E → G → H → … Un retraso de 2 días en G (Fabricación de PCBs) compromete el nodo H y el cierre del camino principal.' },
+              { Icon: CheckCircle2, color: accent, text: 'La actividad E (Adquisición e importación de hardware, $3,500,000 COP) es la de mayor costo y mayor duración (10 días) del camino crítico. Es el punto de mayor riesgo financiero y temporal del proyecto.' },
+            ].map(({ Icon, color, text }, index) => (
+              <div key={index} className="flex gap-3 rounded-2xl border border-white/10 bg-white/[0.03] p-4">
+                <Icon className={`mt-0.5 h-4 w-4 shrink-0 ${color}`} />
+                <p className="text-sm leading-7 text-slate-100">{text}</p>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {section === 'gantt' && (
+          <div className="space-y-3">
+            <div className={`rounded-2xl border ${accentBorder} ${accentBg} p-4`}>
+              <p className={`mb-3 text-xs uppercase tracking-[0.24em] ${accent}`}>
+                Actividades críticas (H = 0) visibles en rojo
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {['A', 'D', 'E', 'F', 'H', 'J', 'R', 'S', 'T'].map((id) => (
+                  <span
+                    key={id}
+                    className="rounded-lg border border-red-400/40 bg-red-500/15 px-2.5 py-1 text-xs font-semibold text-red-200"
+                  >
+                    {id}
+                  </span>
+                ))}
+              </div>
+              <p className="mt-2 text-xs text-slate-400">Filtra con «Ver solo Ruta Crítica» para destacarlas en el Gantt</p>
+            </div>
+            {[
+              { Icon: CheckCircle2, color: accent, text: 'Entre los días 3 y 26 hasta 5 actividades corren en paralelo (B, C, D, N y G). Este paralelismo reduce la duración efectiva sin comprometer la ruta crítica.' },
+              { Icon: CheckCircle2, color: accent, text: 'El nodo de mayor convergencia es S (días 38–43): las ramas R, Q y P confluyen aquí. Un atraso en cualquiera de estas tres impacta directamente la fecha de cierre del proyecto.' },
+              { Icon: AlertTriangle, color: 'text-amber-300', text: 'C (H = 1 día) y G (H = 2 días) tienen holgura mínima. Un cambio de alcance o retraso de proveedor dentro de ese margen convierte estas rutas en críticas y compromete el cierre.' },
+              { Icon: CheckCircle2, color: accent, text: 'La actividad E (días 9–19, $3,500,000 COP) define el cuello de botella del proyecto: mayor duración, mayor costo y predecesora directa de toda la rama de fabricación (F, G, H).' },
+            ].map(({ Icon, color, text }, index) => (
+              <div key={index} className="flex gap-3 rounded-2xl border border-white/10 bg-white/[0.03] p-4">
+                <Icon className={`mt-0.5 h-4 w-4 shrink-0 ${color}`} />
+                <p className="text-sm leading-7 text-slate-100">{text}</p>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {section === 'transporte' && (
+          <div className="space-y-3">
+            <div className={`rounded-2xl border ${accentBorder} ${accentBg} p-4`}>
+              <div className="grid grid-cols-3 gap-4">
+                <div>
+                  <p className="text-[10px] uppercase tracking-[0.2em] text-slate-400">Costo Mínimo</p>
+                  <p className="mt-1 text-2xl font-semibold text-amber-100">6.510</p>
+                </div>
+                <div>
+                  <p className="text-[10px] uppercase tracking-[0.2em] text-slate-400">Vogel (VAM)</p>
+                  <p className="mt-1 text-2xl font-semibold text-amber-100">5.970</p>
+                </div>
+                <div>
+                  <p className="text-[10px] uppercase tracking-[0.2em] text-slate-400">Ahorro VAM</p>
+                  <p className="mt-1 text-2xl font-semibold text-emerald-300">−540 (8.3 %)</p>
+                </div>
+              </div>
+            </div>
+            {[
+              { Icon: CheckCircle2, color: accent, text: 'VAM supera a Costo Mínimo en 540 unidades (8.3 %). Vogel penaliza el costo de no elegir la ruta más barata en cada iteración, tomando mejores decisiones iniciales de asignación.' },
+              { Icon: CheckCircle2, color: accent, text: 'VAM encontró la solución óptima global: su resultado (5,970) coincide exactamente con el Solver Simplex, confirmando la alta eficacia del método para este problema balanceado.' },
+              { Icon: CheckCircle2, color: accent, text: 'El problema está balanceado (oferta = demanda = 450 min), lo que permite aplicar métodos directos sin variables artificiales ni penalizaciones externas.' },
+              { Icon: CheckCircle2, color: accent, text: 'Las rutas más eficientes son G1→F1 (c=10) y G2→F2 (c=15). G3 se asigna completamente a F3 (c=12), maximizando el uso de los recursos de menor costo unitario disponibles en la red.' },
+            ].map(({ Icon, color, text }, index) => (
+              <div key={index} className="flex gap-3 rounded-2xl border border-white/10 bg-white/[0.03] p-4">
+                <Icon className={`mt-0.5 h-4 w-4 shrink-0 ${color}`} />
+                <p className="text-sm leading-7 text-slate-100">{text}</p>
+              </div>
+            ))}
+          </div>
+        )}
+      </article>
+    </div>
   )
 }
 

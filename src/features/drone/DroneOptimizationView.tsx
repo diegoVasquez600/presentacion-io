@@ -1,4 +1,4 @@
-import { BookOpen, CheckCircle2, Sigma, Zap } from 'lucide-react'
+import { BookOpen, Sigma, Zap } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { InlineMath, BlockMath } from 'react-katex'
 import {
@@ -54,6 +54,9 @@ export function DroneOptimizationView() {
 
   const totalCost = useMemo(() => matrixCost(allocation), [allocation])
   const optimalCost = useMemo(() => transportSolverOptimalCost, [])
+  const minCostMethodTotal = useMemo(() => matrixCost(costMinimumAllocation), [])
+  const vogelMethodTotal = useMemo(() => matrixCost(vogelAllocation), [])
+  const methodSavings = useMemo(() => minCostMethodTotal - vogelMethodTotal, [minCostMethodTotal, vogelMethodTotal])
 
   const rowTotals = useMemo(
     () => transportSources.map((_, rowIndex) => rowUsage(allocation, rowIndex)),
@@ -329,78 +332,90 @@ export function DroneOptimizationView() {
         <div className="mt-5 grid gap-4 xl:grid-cols-2">
           <article className="rounded-2xl border border-cyan-400/20 bg-cyan-400/10 p-4">
             <p className="text-xs uppercase tracking-[0.24em] text-cyan-200/90">
-              Punto 2 · Modelo algebraico de transporte
+              Punto 2.1 · Modelo algebraico del caso real
             </p>
             <div className="mt-3 space-y-3 text-sm leading-7 text-slate-100">
               <p>
-                <strong>Función objetivo:</strong> minimizar el costo total de asignación
-                entre gateways y fincas.
+                <strong>Variables:</strong> <InlineMath math={'x_{ij}'} /> = minutos enviados del Gateway <InlineMath math={'G_i'} /> a la Finca <InlineMath math={'F_j'} />.
               </p>
               <div className="overflow-x-auto rounded-xl border border-white/10 bg-slate-950/70 p-4">
-                <BlockMath math={"\\text{Minimizar} \\quad Z = \\sum_i \\sum_j c_{ij} \\cdot x_{ij}"} />
+                <BlockMath
+                  math={
+                    "\\text{Minimizar } Z = 10x_{11}+20x_{12}+30x_{13}+40x_{21}+15x_{22}+25x_{23}+35x_{31}+45x_{32}+12x_{33}+18x_{41}+22x_{42}+14x_{43}"
+                  }
+                />
               </div>
-              <p className="text-xs uppercase tracking-[0.18em] text-cyan-300">Sujeto a restricciones:</p>
+              <p className="text-xs uppercase tracking-[0.18em] text-cyan-300">Restricciones de oferta (gateways)</p>
               <div className="space-y-2 rounded-xl border border-white/10 bg-slate-950/70 p-4 text-xs leading-6">
                 <div className="overflow-x-auto">
-                  <BlockMath math={"\\sum_j x_{ij} \\leq \\text{oferta}_i \\quad \\forall i"} />
+                  <BlockMath math={"x_{11}+x_{12}+x_{13}=120"} />
                 </div>
                 <div className="overflow-x-auto">
-                  <BlockMath math={"\\sum_i x_{ij} = \\text{demanda}_j \\quad \\forall j"} />
+                  <BlockMath math={"x_{21}+x_{22}+x_{23}=150"} />
                 </div>
                 <div className="overflow-x-auto">
-                  <BlockMath math={"x_{ij} \\geq 0"} />
+                  <BlockMath math={"x_{31}+x_{32}+x_{33}=100"} />
+                </div>
+                <div className="overflow-x-auto">
+                  <BlockMath math={"x_{41}+x_{42}+x_{43}=80"} />
+                </div>
+              </div>
+              <p className="text-xs uppercase tracking-[0.18em] text-cyan-300">Restricciones de demanda (fincas)</p>
+              <div className="space-y-2 rounded-xl border border-white/10 bg-slate-950/70 p-4 text-xs leading-6">
+                <div className="overflow-x-auto">
+                  <BlockMath math={"x_{11}+x_{21}+x_{31}+x_{41}=130"} />
+                </div>
+                <div className="overflow-x-auto">
+                  <BlockMath math={"x_{12}+x_{22}+x_{32}+x_{42}=170"} />
+                </div>
+                <div className="overflow-x-auto">
+                  <BlockMath math={"x_{13}+x_{23}+x_{33}+x_{43}=150"} />
+                </div>
+                <div className="overflow-x-auto">
+                  <BlockMath
+                    math={
+                      "x_{11},x_{12},x_{13},x_{21},x_{22},x_{23},x_{31},x_{32},x_{33},x_{41},x_{42},x_{43}\\ge 0"
+                    }
+                  />
                 </div>
               </div>
               <p>
-                Donde <InlineMath math={"x_{ij}"} /> representa minutos enviados desde el Gateway <InlineMath math={"i"} /> hacia la
-                Finca <InlineMath math={"j"} />, y <InlineMath math={"c_{ij}"} /> es el costo unitario de transporte.
+                Modelo balanceado: oferta total = 450 y demanda total = 450.
               </p>
             </div>
           </article>
 
           <article className="rounded-2xl border border-amber-400/20 bg-amber-400/10 p-4">
             <p className="text-xs uppercase tracking-[0.24em] text-amber-200/90">
-              Método de Aproximación de Vogel (2.2)
+              Punto 2.2 · Resolución: Costo Mínimo vs Vogel
             </p>
-            <div className="mt-3 space-y-2 text-sm leading-7 text-slate-100">
+            <div className="mt-3 space-y-3 text-sm leading-7 text-slate-100">
               <p>
-                VAM calcula penalizaciones por fila y columna para priorizar las celdas con
-                mayor impacto en costo antes de asignar.
+                Se comparan dos métodos factibles sobre el mismo modelo algebraico del caso real:
+                <strong> Costo Mínimo</strong> y <strong>Vogel (VAM)</strong>.
+              </p>
+              <div className="rounded-xl border border-white/10 bg-slate-950/70 p-4">
+                <div className="overflow-x-auto">
+                  <BlockMath math={`Z_{CM}=${minCostMethodTotal}`} />
+                </div>
+                <div className="overflow-x-auto">
+                  <BlockMath math={`Z_{VAM}=${vogelMethodTotal}`} />
+                </div>
+                <div className="overflow-x-auto">
+                  <BlockMath math={`\\Delta=Z_{CM}-Z_{VAM}=${methodSavings}`} />
+                </div>
+              </div>
+              <p>
+                <strong>Resultado:</strong> VAM reduce {methodSavings} unidades de costo frente a
+                Costo Mínimo y coincide con el valor óptimo del solver ({optimalCost}).
               </p>
               <p>
-                En esta vista puedes cargar una solución VAM con el botón
-                <strong> Aproximación de Vogel</strong> y compararla contra Costo Mínimo y Solver.
-              </p>
-              <p>
-                <strong>Costo actual del plan cargado:</strong>{' '}
-                {formatCost(matrixCost(activeMethod === 'vam' ? vogelAllocation : allocation))}
+                <strong>Costo del plan activo en pantalla:</strong> {formatCost(totalCost)}.
               </p>
             </div>
           </article>
         </div>
 
-        <article className="mt-4 rounded-2xl border border-emerald-300/20 bg-emerald-400/10 p-4">
-          <p className="text-xs uppercase tracking-[0.24em] text-emerald-200/90">
-            2.3 Conclusiones de la actividad
-          </p>
-          <div className="mt-3 grid gap-2 text-sm leading-7 text-emerald-50 md:grid-cols-3">
-            <p className="rounded-xl border border-emerald-300/20 bg-emerald-950/35 p-3">
-              <CheckCircle2 className="mb-2 h-4 w-4 text-emerald-300" />
-              El modelado algebraico permite justificar técnica y cuantitativamente cada
-              decisión de asignación energética desde gateways hacia fincas.
-            </p>
-            <p className="rounded-xl border border-emerald-300/20 bg-emerald-950/35 p-3">
-              <CheckCircle2 className="mb-2 h-4 w-4 text-emerald-300" />
-              La Aproximación de Vogel (VAM) es más óptima que Costo Mínimo:
-              VAM = 5970 vs Costo Mínimo = 6510. Diferencia: 540 unidades de ahorro.
-            </p>
-            <p className="rounded-xl border border-emerald-300/20 bg-emerald-950/35 p-3">
-              <CheckCircle2 className="mb-2 h-4 w-4 text-emerald-300" />
-              Comparar métodos heurísticos mejora la comprensión de soluciones
-              factibles vs óptimas en problemas de transporte balanceados.
-            </p>
-          </div>
-        </article>
       </div>
     </section>
   )
